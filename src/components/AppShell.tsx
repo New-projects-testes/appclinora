@@ -34,7 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           </Link>
-          <p className="text-xs text-sidebar-foreground/60 mt-1">gestão clínica serena</p>
+          <p className="text-xs text-sidebar-foreground/60 mt-1">gestão clínica</p>
         </div>
 
         <nav className="flex-1 px-3 space-y-0.5">

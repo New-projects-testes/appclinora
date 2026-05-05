@@ -31,7 +31,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Clinora — gestão clínica para profissionais de saúde mental" },
       { name: "description", content: "Agenda, prontuário, finanças e lembretes em um só lugar. Menos burocracia, mais cuidado." },
-      { property: "og:title", content: "Clinora — gestão clínica serena" },
+      { property: "og:title", content: "Clinora — gestão clínica" },
       { property: "og:description", content: "Agenda, prontuário, finanças e lembretes em um só lugar." },
       { property: "og:type", content: "website" },
     ],
