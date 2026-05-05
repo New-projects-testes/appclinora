@@ -87,7 +87,7 @@ function Dashboard() {
           actions={
             <>
               {currentUser.verification_status && <VerifiedBadge size="md" />}
-              <button className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-full px-4 py-2 text-sm hover:bg-primary/90">
+              <button onClick={() => setOpenNew(true)} className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm hover:bg-primary/90">
                 <Plus className="h-4 w-4" /> Nova sessão
               </button>
             </>
