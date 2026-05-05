@@ -175,6 +175,62 @@ function Dashboard() {
           </section>
         </div>
       </div>
+
+      <Dialog open={openNew} onOpenChange={setOpenNew}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova sessão</DialogTitle>
+            <DialogDescription>Agende um novo atendimento.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Paciente</Label>
+              <Select value={form.patient_id} onValueChange={(v) => setForm({ ...form, patient_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione um paciente" /></SelectTrigger>
+                <SelectContent>
+                  {patients.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Horário</Label>
+                <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>Duração (min)</Label>
+                <Input type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Modalidade</Label>
+                <Select value={form.modality} onValueChange={(v) => setForm({ ...form, modality: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="presencial">Presencial</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpenNew(false)}>Cancelar</Button>
+              <Button type="submit">Criar sessão</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
