@@ -1,0 +1,164 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { catalog } from "@/lib/mock-data";
+import type { Professional } from "@/lib/types";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { useState } from "react";
+import { Search, MapPin, Globe2, Building2, X, Mail, Phone } from "lucide-react";
+
+export const Route = createFileRoute("/catalogo")({
+  head: () => ({
+    meta: [
+      { title: "Catálogo — encontre profissionais de saúde mental verificados" },
+      { name: "description", content: "Conheça psicólogos, psiquiatras e terapeutas verificados. Marque sua consulta com poucos cliques." },
+    ],
+  }),
+  component: Catalogo,
+});
+
+function Catalogo() {
+  const [q, setQ] = useState("");
+  const [specialty, setSpecialty] = useState<string>("Todas");
+  const [open, setOpen] = useState<Professional | null>(null);
+
+  const specialties = ["Todas", ...Array.from(new Set(catalog.map((p) => p.specialty)))];
+
+  const visible = catalog.filter((p) => p.catalog_visible && p.verification_status);
+  const filtered = visible.filter((p) => {
+    if (specialty !== "Todas" && p.specialty !== specialty) return false;
+    if (q) {
+      const s = q.toLowerCase();
+      return p.name.toLowerCase().includes(s) || p.specialty.toLowerCase().includes(s) || p.city.toLowerCase().includes(s);
+    }
+    return true;
+  });
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-sidebar/60 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+          <Link to="/" className="flex items-baseline gap-1.5">
+            <span className="font-display text-2xl">Clinora</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+          </Link>
+          <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground">Sou profissional</Link>
+        </div>
+      </header>
+
+      <section className="max-w-6xl mx-auto px-6 pt-16 pb-10">
+        <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Catálogo público</p>
+        <h1 className="font-display text-5xl md:text-6xl mt-3 max-w-3xl tracking-tight">
+          Encontre o cuidado <span className="italic text-primary">certo</span> para você.
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
+          Profissionais verificados, com registro validado e link direto para agendamento.
+        </p>
+
+        <div className="mt-10 flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="h-4 w-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar por nome, especialidade ou cidade..."
+              className="w-full bg-card border border-border rounded-full pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <select
+            value={specialty}
+            onChange={(e) => setSpecialty(e.target.value)}
+            className="bg-card border border-border rounded-full px-5 py-3.5 text-sm focus:outline-none"
+          >
+            {specialties.map((s) => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setOpen(p)}
+              className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all"
+            >
+              <div className="flex items-start gap-4">
+                <img src={p.avatar} alt="" className="h-16 w-16 rounded-full object-cover" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-display text-lg leading-tight">{p.name}</h3>
+                    <VerifiedBadge />
+                  </div>
+                  <p className="text-sm text-primary mt-0.5">{p.specialty}</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-4 line-clamp-3">{p.bio}</p>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-5">
+                <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{p.city}, {p.state}</span>
+                {p.accepts_online && <span className="inline-flex items-center gap-1"><Globe2 className="h-3 w-3" />Online</span>}
+                {p.accepts_presential && <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" />Presencial</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="text-center py-20 text-muted-foreground">
+            Nenhum profissional encontrado para sua busca.
+          </div>
+        )}
+      </section>
+
+      {open && <ProfileModal pro={open} onClose={() => setOpen(null)} />}
+
+      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
+        © 2026 Clinora · feito com cuidado
+      </footer>
+    </div>
+  );
+}
+
+function ProfileModal({ pro, onClose }: { pro: Professional; onClose: () => void }) {
+  const [contact, setContact] = useState(false);
+  return (
+    <div className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-card rounded-3xl max-w-lg w-full p-8 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-secondary rounded-full">
+          <X className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-4">
+          <img src={pro.avatar} alt="" className="h-20 w-20 rounded-full object-cover" />
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-2xl">{pro.name}</h2>
+              <VerifiedBadge />
+            </div>
+            <p className="text-primary">{pro.specialty}</p>
+            <p className="text-xs text-muted-foreground mt-1">{pro.registration_type} {pro.registration_number}</p>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground mt-5">{pro.bio}</p>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-4">
+          <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{pro.city}, {pro.state}</span>
+          {pro.accepts_online && <span className="inline-flex items-center gap-1"><Globe2 className="h-3 w-3" />Online</span>}
+          {pro.accepts_presential && <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" />Presencial</span>}
+        </div>
+
+        {contact ? (
+          <div className="mt-6 p-4 bg-secondary/50 rounded-xl space-y-2 text-sm">
+            <p className="inline-flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> {pro.email}</p>
+            <p className="inline-flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> Solicite via e-mail</p>
+          </div>
+        ) : (
+          <div className="mt-6 flex gap-3">
+            <button onClick={() => setContact(true)} className="flex-1 bg-primary text-primary-foreground rounded-full py-3 text-sm font-medium hover:bg-primary/90">
+              Entrar em contato
+            </button>
+            <a href={`https://clinora.app/agendar/${pro.id}`} target="_blank" rel="noreferrer" className="flex-1 border border-border rounded-full py-3 text-sm font-medium text-center hover:bg-secondary">
+              Marcar consulta
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
