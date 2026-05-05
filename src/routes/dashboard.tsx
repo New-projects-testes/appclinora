@@ -5,6 +5,25 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { currentUser, sessions, tasks, patients } from "@/lib/mock-data";
 import { useMemo, useState } from "react";
 import { Plus, Clock, Wallet, CheckCircle2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -13,6 +32,26 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const today = new Date();
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
+  const [openNew, setOpenNew] = useState(false);
+  const [form, setForm] = useState({
+    patient_id: "",
+    date: new Date().toISOString().slice(0, 10),
+    time: "09:00",
+    duration: "50",
+    value: "220",
+    modality: "presencial",
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.patient_id) {
+      toast.error("Selecione um paciente");
+      return;
+    }
+    const p = patients.find((x) => x.id === form.patient_id);
+    toast.success(`Sessão criada para ${p?.name} em ${form.date} às ${form.time}`);
+    setOpenNew(false);
+  };
 
   const todaySessions = useMemo(
     () =>
@@ -48,7 +87,7 @@ function Dashboard() {
           actions={
             <>
               {currentUser.verification_status && <VerifiedBadge size="md" />}
-              <button className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-full px-4 py-2 text-sm hover:bg-primary/90">
+              <button onClick={() => setOpenNew(true)} className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm hover:bg-primary/90">
                 <Plus className="h-4 w-4" /> Nova sessão
               </button>
             </>
@@ -136,6 +175,62 @@ function Dashboard() {
           </section>
         </div>
       </div>
+
+      <Dialog open={openNew} onOpenChange={setOpenNew}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova sessão</DialogTitle>
+            <DialogDescription>Agende um novo atendimento.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Paciente</Label>
+              <Select value={form.patient_id} onValueChange={(v) => setForm({ ...form, patient_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione um paciente" /></SelectTrigger>
+                <SelectContent>
+                  {patients.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Horário</Label>
+                <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>Duração (min)</Label>
+                <Input type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Modalidade</Label>
+                <Select value={form.modality} onValueChange={(v) => setForm({ ...form, modality: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="presencial">Presencial</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpenNew(false)}>Cancelar</Button>
+              <Button type="submit">Criar sessão</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
