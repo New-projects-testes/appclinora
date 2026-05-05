@@ -34,7 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           </Link>
-          <p className="text-xs text-muted-foreground mt-1">gestão clínica serena</p>
+          <p className="text-xs text-sidebar-foreground/60 mt-1">gestão clínica serena</p>
         </div>
 
         <nav className="flex-1 px-3 space-y-0.5">
@@ -47,8 +47,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 to={item.url}
                 className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   active
-                    ? "bg-primary/8 text-primary font-medium before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-[3px] before:rounded-r-full before:bg-primary"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                    ? "bg-white/10 text-white font-medium before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-[3px] before:rounded-r-full before:bg-accent"
+                    : "text-sidebar-foreground/80 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <item.icon className="h-4 w-4" />
@@ -63,17 +63,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-background"
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-sidebar"
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">
                 {currentUser.name}
               </p>
-              <p className="text-xs text-muted-foreground truncate">{currentUser.specialty}</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">{currentUser.specialty}</p>
             </div>
             <Link
               to="/login"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-sidebar-foreground/60 hover:text-white"
               aria-label="Sair"
             >
               <LogOut className="h-4 w-4" />
