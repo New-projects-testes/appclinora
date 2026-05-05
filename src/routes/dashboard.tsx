@@ -58,7 +58,7 @@ function Dashboard() {
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           <Stat label="Sessões hoje" value={todaySessions.length.toString()} sub={`${todaySessions.length * 50} min agendados`} />
           <Stat label="Recebido no mês" value={`R$ ${paid.toLocaleString("pt-BR")}`} sub={`${monthSessions.filter((s) => s.payment_status === "paid").length} sessões pagas`} accent="success" />
-          <Stat label="A receber" value={`R$ ${pending.toLocaleString("pt-BR")}`} sub={`${monthSessions.filter((s) => s.payment_status === "pending").length} pendentes`} accent="warning" />
+          <Stat label="A receber" value={`R$ ${pending.toLocaleString("pt-BR")}`} sub={`${monthSessions.filter((s) => s.payment_status === "pending").length} sessões pendentes`} accent="warning" />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
