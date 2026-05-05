@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FinancasRouteImport } from './routes/financas'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AgendaRouteImport } from './routes/agenda'
@@ -20,6 +21,11 @@ import { Route as PacientesIdRouteImport } from './routes/pacientes.$id'
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinancasRoute = FinancasRouteImport.update({
+  id: '/financas',
+  path: '/financas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/dashboard': typeof DashboardRoute
+  '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes/': typeof PacientesIndexRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/dashboard': typeof DashboardRoute
+  '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes': typeof PacientesIndexRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/dashboard': typeof DashboardRoute
+  '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes/': typeof PacientesIndexRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/dashboard'
+    | '/financas'
     | '/login'
     | '/pacientes/$id'
     | '/pacientes/'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/dashboard'
+    | '/financas'
     | '/login'
     | '/pacientes/$id'
     | '/pacientes'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/dashboard'
+    | '/financas'
     | '/login'
     | '/pacientes/$id'
     | '/pacientes/'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   AgendaRoute: typeof AgendaRoute
   CadastroRoute: typeof CadastroRoute
   DashboardRoute: typeof DashboardRoute
+  FinancasRoute: typeof FinancasRoute
   LoginRoute: typeof LoginRoute
   PacientesIdRoute: typeof PacientesIdRoute
   PacientesIndexRoute: typeof PacientesIndexRoute
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financas': {
+      id: '/financas'
+      path: '/financas'
+      fullPath: '/financas'
+      preLoaderRoute: typeof FinancasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgendaRoute: AgendaRoute,
   CadastroRoute: CadastroRoute,
   DashboardRoute: DashboardRoute,
+  FinancasRoute: FinancasRoute,
   LoginRoute: LoginRoute,
   PacientesIdRoute: PacientesIdRoute,
   PacientesIndexRoute: PacientesIndexRoute,
