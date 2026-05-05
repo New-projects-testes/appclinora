@@ -32,6 +32,26 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const today = new Date();
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
+  const [openNew, setOpenNew] = useState(false);
+  const [form, setForm] = useState({
+    patient_id: "",
+    date: new Date().toISOString().slice(0, 10),
+    time: "09:00",
+    duration: "50",
+    value: "220",
+    modality: "presencial",
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.patient_id) {
+      toast.error("Selecione um paciente");
+      return;
+    }
+    const p = patients.find((x) => x.id === form.patient_id);
+    toast.success(`Sessão criada para ${p?.name} em ${form.date} às ${form.time}`);
+    setOpenNew(false);
+  };
 
   const todaySessions = useMemo(
     () =>
