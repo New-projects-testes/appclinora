@@ -45,9 +45,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.url}
                 to={item.url}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   active
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                    ? "bg-primary/8 text-primary font-medium before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-[3px] before:rounded-r-full before:bg-primary"
                     : "text-sidebar-foreground hover:bg-sidebar-accent"
                 }`}
               >
