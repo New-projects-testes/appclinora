@@ -13,6 +13,7 @@ import { Route as TarefasRouteImport } from './routes/tarefas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FinancasRouteImport } from './routes/financas'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CatalogoRouteImport } from './routes/catalogo'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AgendaRouteImport } from './routes/agenda'
@@ -38,6 +39,11 @@ const FinancasRoute = FinancasRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CatalogoRoute = CatalogoRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/catalogo': typeof CatalogoRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/catalogo': typeof CatalogoRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/catalogo': typeof CatalogoRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/catalogo'
+    | '/configuracoes'
     | '/dashboard'
     | '/financas'
     | '/login'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/catalogo'
+    | '/configuracoes'
     | '/dashboard'
     | '/financas'
     | '/login'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/catalogo'
+    | '/configuracoes'
     | '/dashboard'
     | '/financas'
     | '/login'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   AgendaRoute: typeof AgendaRoute
   CadastroRoute: typeof CadastroRoute
   CatalogoRoute: typeof CatalogoRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   FinancasRoute: typeof FinancasRoute
   LoginRoute: typeof LoginRoute
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/catalogo': {
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgendaRoute: AgendaRoute,
   CadastroRoute: CadastroRoute,
   CatalogoRoute: CatalogoRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   FinancasRoute: FinancasRoute,
   LoginRoute: LoginRoute,
