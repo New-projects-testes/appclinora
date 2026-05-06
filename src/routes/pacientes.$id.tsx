@@ -75,11 +75,13 @@ export const Route = createFileRoute("/pacientes/$id")({
 
 function PatientDetail() {
   const { id } = Route.useParams();
-  const patient = patients.find((p) => p.id === id);
-  const [status, setStatus] = useState<PatientStatus>(patient?.status ?? "ativo");
+  const original = patients.find((p) => p.id === id);
+  const [patient, setPatient] = useState(original);
+  const [status, setStatus] = useState<PatientStatus>(original?.status ?? "ativo");
   const [allSessions, setAllSessions] = useState<Session[]>(initialSessions);
   const [tab, setTab] = useState("atendimentos");
   const [openSchedule, setOpenSchedule] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
 
   // Editor state
   const [draft, setDraft] = useState("");
