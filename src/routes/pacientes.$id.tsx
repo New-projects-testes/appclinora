@@ -5,6 +5,7 @@ import type { PatientStatus } from "@/lib/types";
 import { useState } from "react";
 import { ArrowLeft, Phone, Mail, Plus, X, Save, FileText } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PatientAvatar } from "@/components/PatientAvatar";
 
 const STATUS_LABEL: Record<PatientStatus, string> = {
   ativo: "Ativo",
