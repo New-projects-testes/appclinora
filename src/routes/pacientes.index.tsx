@@ -177,11 +177,11 @@ function Pacientes() {
                   <td className="p-4">
                     <Select value={p.status} onValueChange={(v) => updateStatus(p.id, v as PatientStatus)}>
                       <SelectTrigger className={`h-8 w-[140px] border-0 text-xs font-medium ${STATUS_META[p.status].className}`}>
-                        <SelectValue />
+                        <span>{STATUS_META[p.status].label}</span>
                       </SelectTrigger>
                       <SelectContent>
                         {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
-                          <SelectItem key={s} value={s}>
+                          <SelectItem key={s} value={s} textValue={STATUS_META[s].label}>
                             <div className="flex flex-col">
                               <span className="text-sm">{STATUS_META[s].label}</span>
                               <span className="text-xs text-muted-foreground">{STATUS_META[s].description}</span>
