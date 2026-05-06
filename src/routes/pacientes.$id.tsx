@@ -273,7 +273,7 @@ function PatientDetail() {
               ) : (
                 <div className="text-center py-8 text-sm text-muted-foreground">
                   <p>Nenhuma sessão agendada.</p>
-                  <Button variant="outline" size="sm" className="mt-3 rounded-lg">
+                  <Button variant="outline" size="sm" className="mt-3 rounded-lg" onClick={() => setOpenSchedule(true)}>
                     <Plus className="h-4 w-4" /> Agendar sessão
                   </Button>
                 </div>
