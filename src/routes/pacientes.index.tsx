@@ -249,10 +249,20 @@ function NewPatientDialog({
   const [gName, setGName] = useState("");
   const [gEmail, setGEmail] = useState("");
   const [gPhone, setGPhone] = useState("");
+  const [photo, setPhoto] = useState<string | undefined>(undefined);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const onPickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const reset = () => {
     setName(""); setEmail(""); setPhone(""); setBirthDate(""); setGender(""); setNotes("");
-    setIsMinor(false); setGName(""); setGEmail(""); setGPhone("");
+    setIsMinor(false); setGName(""); setGEmail(""); setGPhone(""); setPhoto(undefined);
   };
 
   const submit = (e: React.FormEvent) => {
@@ -279,7 +289,7 @@ function NewPatientDialog({
       guardianPhone: isMinor ? gPhone.trim() : undefined,
       status: "ativo",
       tags: [],
-      avatar: `https://i.pravatar.cc/100?u=${encodeURIComponent(email || name)}`,
+      avatar: photo,
     };
     onCreate(p);
     reset();
@@ -294,6 +304,23 @@ function NewPatientDialog({
           <DialogDescription>Preencha os dados para criar um novo prontuário.</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
+          <div className="flex items-center gap-4">
+            <PatientAvatar name={name || "?"} src={photo} size={64} />
+            <div className="flex flex-col gap-1">
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={onPickPhoto} className="hidden" />
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  {photo ? "Trocar foto" : "Adicionar foto"}
+                </Button>
+                {photo && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setPhoto(undefined)}>
+                    Remover
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">Opcional. PNG ou JPG.</p>
+            </div>
+          </div>
           <div className="grid md:grid-cols-2 gap-4">
             <Field label="Nome completo" required>
               <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
