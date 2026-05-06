@@ -36,6 +36,18 @@ export const patients: Patient[] = [
   { id: "p4", name: "Beatriz Souza", email: "beatriz.souza@email.com", phone: "(11) 91234-9988", status: "ativo", tags: ["t1"], lastSession: "2026-05-03", avatar: "https://i.pravatar.cc/100?img=49" },
   { id: "p5", name: "Camila Ferreira", email: "camila.ferreira@email.com", phone: "(11) 99888-1010", status: "inativo", tags: ["t6"], lastSession: "2026-04-30", avatar: "https://i.pravatar.cc/100?img=24" },
   { id: "p6", name: "Eduardo Reis", email: "eduardo.reis@email.com", phone: "(11) 98321-4400", status: "encerrado", tags: ["t3", "t1"], lastSession: "2026-04-18", avatar: "https://i.pravatar.cc/100?img=68" },
+  { id: "p7", name: "Mariana Alves", email: "mariana.alves@email.com", phone: "(11) 99111-2233", status: "ativo", tags: ["t1"], lastSession: "2026-05-02" },
+  { id: "p8", name: "Lucas Pereira", email: "lucas.pereira@email.com", phone: "(11) 98222-3344", status: "ativo", tags: ["t3"], lastSession: "2026-04-25" },
+  { id: "p9", name: "Patricia Gomes", email: "patricia.gomes@email.com", phone: "(11) 97333-4455", status: "em_pausa", tags: ["t2"], lastSession: "2026-04-10" },
+  { id: "p10", name: "Fernando Dias", email: "fernando.dias@email.com", phone: "(11) 96444-5566", status: "ativo", tags: ["t4"], lastSession: "2026-05-04" },
+  { id: "p11", name: "Isabela Rocha", email: "isabela.rocha@email.com", phone: "(11) 95555-6677", status: "ativo", tags: ["t1", "t5"], lastSession: "2026-04-29" },
+  { id: "p12", name: "Gabriel Martins", email: "gabriel.martins@email.com", phone: "(11) 94666-7788", status: "inativo", tags: ["t6"], lastSession: "2026-03-15" },
+  { id: "p13", name: "Larissa Cunha", email: "larissa.cunha@email.com", phone: "(11) 93777-8899", status: "ativo", tags: ["t2", "t3"], lastSession: "2026-05-05" },
+  { id: "p14", name: "Thiago Barbosa", email: "thiago.barbosa@email.com", phone: "(11) 92888-9900", status: "ativo", tags: ["t1"], lastSession: "2026-04-27" },
+  { id: "p15", name: "Sofia Cardoso", email: "sofia.cardoso@email.com", phone: "(11) 91999-0011", status: "encerrado", tags: ["t4"], lastSession: "2026-02-20" },
+  { id: "p16", name: "Ricardo Nunes", email: "ricardo.nunes@email.com", phone: "(11) 90000-1122", status: "ativo", tags: ["t5"], lastSession: "2026-05-01" },
+  { id: "p17", name: "Juliana Pires", email: "juliana.pires@email.com", phone: "(11) 98888-2233", status: "em_pausa", tags: ["t1"], lastSession: "2026-04-12" },
+  { id: "p18", name: "Bruno Tavares", email: "bruno.tavares@email.com", phone: "(11) 97777-3344", status: "ativo", tags: ["t3"], lastSession: "2026-04-30" },
 ];
 
 const today = new Date();

@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { patients as initialPatients } from "@/lib/mock-data";
 import type { Patient, PatientStatus } from "@/lib/types";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { PatientAvatar } from "@/components/PatientAvatar";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/pacientes/")({
@@ -166,7 +167,7 @@ function Pacientes() {
                     onClick={() => navigate({ to: "/pacientes/$id", params: { id: p.id } })}
                   >
                     <div className="flex items-center gap-3 p-4 transition-colors group-hover:bg-primary/5">
-                      <img src={p.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
+                      <PatientAvatar name={p.name} src={p.avatar} size={36} />
                       <div className="min-w-0">
                         <p className="font-medium group-hover:text-primary transition-colors truncate">{p.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{p.email}</p>
@@ -181,9 +182,14 @@ function Pacientes() {
                       </SelectTrigger>
                       <SelectContent>
                         {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
-                          <SelectItem key={s} value={s} textValue={STATUS_META[s].label}>
+                          <SelectItem
+                            key={s}
+                            value={s}
+                            textValue={STATUS_META[s].label}
+                            className="focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-primary/8"
+                          >
                             <div className="flex flex-col">
-                              <span className="text-sm">{STATUS_META[s].label}</span>
+                              <span className="text-sm text-foreground">{STATUS_META[s].label}</span>
                               <span className="text-xs text-muted-foreground">{STATUS_META[s].description}</span>
                             </div>
                           </SelectItem>
@@ -243,10 +249,20 @@ function NewPatientDialog({
   const [gName, setGName] = useState("");
   const [gEmail, setGEmail] = useState("");
   const [gPhone, setGPhone] = useState("");
+  const [photo, setPhoto] = useState<string | undefined>(undefined);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const onPickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const reset = () => {
     setName(""); setEmail(""); setPhone(""); setBirthDate(""); setGender(""); setNotes("");
-    setIsMinor(false); setGName(""); setGEmail(""); setGPhone("");
+    setIsMinor(false); setGName(""); setGEmail(""); setGPhone(""); setPhoto(undefined);
   };
 
   const submit = (e: React.FormEvent) => {
@@ -273,7 +289,7 @@ function NewPatientDialog({
       guardianPhone: isMinor ? gPhone.trim() : undefined,
       status: "ativo",
       tags: [],
-      avatar: `https://i.pravatar.cc/100?u=${encodeURIComponent(email || name)}`,
+      avatar: photo,
     };
     onCreate(p);
     reset();
@@ -288,6 +304,23 @@ function NewPatientDialog({
           <DialogDescription>Preencha os dados para criar um novo prontuário.</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
+          <div className="flex items-center gap-4">
+            <PatientAvatar name={name || "?"} src={photo} size={64} />
+            <div className="flex flex-col gap-1">
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={onPickPhoto} className="hidden" />
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  {photo ? "Trocar foto" : "Adicionar foto"}
+                </Button>
+                {photo && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setPhoto(undefined)}>
+                    Remover
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">Opcional. PNG ou JPG.</p>
+            </div>
+          </div>
           <div className="grid md:grid-cols-2 gap-4">
             <Field label="Nome completo" required>
               <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
