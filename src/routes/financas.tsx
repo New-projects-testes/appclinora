@@ -5,16 +5,19 @@ import { PatientAvatar } from "@/components/PatientAvatar";
 import { Button } from "@/components/ui/button";
 import { sessions as initial, patients } from "@/lib/mock-data";
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ArrowUp, ArrowDown, Calendar as CalendarIcon, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const PAYMENT_META = {
   paid: { label: "Pago", description: "Sessão já recebida", className: "bg-success/15 text-success" },
   pending: { label: "Pendente", description: "Aguardando pagamento", className: "bg-warning/20 text-warning-foreground" },
+  isento: { label: "Isento", description: "Sessão oferecida sem cobrança", className: "bg-muted text-muted-foreground" },
 } as const;
 type PaymentStatus = keyof typeof PAYMENT_META;
 
 const PAGE_SIZE = 10;
+const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 export const Route = createFileRoute("/financas")({
   component: Financas,
@@ -22,21 +25,24 @@ export const Route = createFileRoute("/financas")({
 
 function Financas() {
   const [sessions, setSessions] = useState(initial);
-  const [period, setPeriod] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  });
+  const now = new Date();
+  const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [period, setPeriod] = useState<string>(currentPeriod); // "" = todos
   const [q, setQ] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | "all">("all");
   const [page, setPage] = useState(1);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   useEffect(() => { setPage(1); }, [period, q, paymentFilter]);
 
   const filtered = useMemo(() => {
-    const [y, m] = period.split("-").map(Number);
     const term = q.trim().toLowerCase();
-    return sessions.filter((s) => {
-      const d = new Date(s.date_time);
-      if (d.getFullYear() !== y || d.getMonth() !== m - 1) return false;
+    let [y, m] = [0, 0];
+    if (period) [y, m] = period.split("-").map(Number);
+    const list = sessions.filter((s) => {
+      if (period) {
+        const d = new Date(s.date_time);
+        if (d.getFullYear() !== y || d.getMonth() !== m - 1) return false;
+      }
       if (paymentFilter !== "all" && s.payment_status !== paymentFilter) return false;
       if (term) {
         const p = patients.find((x) => x.id === s.patient_id);
@@ -44,11 +50,16 @@ function Financas() {
       }
       return true;
     });
-  }, [sessions, period, q, paymentFilter]);
+    return list.sort((a, b) => {
+      const da = new Date(a.date_time).getTime();
+      const db = new Date(b.date_time).getTime();
+      return sortDir === "asc" ? da - db : db - da;
+    });
+  }, [sessions, period, q, paymentFilter, sortDir]);
 
-  const total = filtered.reduce((a, s) => a + s.value, 0);
+  const total = filtered.reduce((a, s) => a + (s.payment_status === "isento" ? 0 : s.value), 0);
   const paid = filtered.filter((s) => s.payment_status === "paid").reduce((a, s) => a + s.value, 0);
-  const pending = total - paid;
+  const pending = filtered.filter((s) => s.payment_status === "pending").reduce((a, s) => a + s.value, 0);
 
   const markPaid = (id: string) =>
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, payment_status: "paid" } : s)));
@@ -57,12 +68,32 @@ function Financas() {
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const periodLabel = period
+    ? `${MONTHS[Number(period.split("-")[1]) - 1]} ${period.split("-")[0]}`
+    : "Todo o período";
+
+  // Date picker options: últimos 24 meses
+  const monthOptions = useMemo(() => {
+    const arr: { value: string; label: string }[] = [];
+    const d = new Date();
+    for (let i = 0; i < 24; i++) {
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      arr.push({
+        value: `${y}-${String(m + 1).padStart(2, "0")}`,
+        label: `${MONTHS[m]} ${y}`,
+      });
+      d.setMonth(d.getMonth() - 1);
+    }
+    return arr;
+  }, []);
+
   return (
     <AppShell>
       <div className="px-6 md:px-10 py-10 max-w-7xl">
         <PageHeader
           eyebrow="Finanças"
-          title="Como anda o seu mês."
+          title="Como anda o seu negócio."
           description="Acompanhe o que entrou e o que está por receber, sem complicação."
         />
 
@@ -84,7 +115,11 @@ function Financas() {
             />
           </div>
           <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
-            <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Status">
+                {paymentFilter === "all" ? "Todos os status" : PAYMENT_META[paymentFilter].label}
+              </SelectValue>
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
               {(Object.keys(PAYMENT_META) as PaymentStatus[]).map((s) => (
@@ -102,12 +137,44 @@ function Financas() {
               ))}
             </SelectContent>
           </Select>
-          <input
-            type="month"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="bg-card border border-border rounded-lg px-3 py-2 text-sm w-full md:w-[180px]"
-          />
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="flex items-center justify-between gap-2 bg-card border border-border rounded-lg px-3 py-2.5 text-sm w-full md:w-[200px] hover:bg-muted/40 transition-colors">
+                <span className="flex items-center gap-2 min-w-0">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">{periodLabel}</span>
+                </span>
+                {period && (
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); setPeriod(""); }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[220px] p-1 max-h-[300px] overflow-y-auto">
+              <button
+                onClick={() => setPeriod("")}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted/60 ${period === "" ? "bg-primary/8 text-primary font-medium" : ""}`}
+              >
+                Todo o período
+              </button>
+              <div className="h-px bg-border my-1" />
+              {monthOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setPeriod(opt.value)}
+                  className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted/60 ${period === opt.value ? "bg-primary/8 text-primary font-medium" : ""}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -115,7 +182,15 @@ function Financas() {
             <thead>
               <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="text-left p-4 font-medium">Paciente</th>
-                <th className="text-left p-4 font-medium">Última sessão</th>
+                <th className="text-left p-4 font-medium">
+                  <button
+                    onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                    className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
+                  >
+                    Última sessão
+                    {sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                  </button>
+                </th>
                 <th className="text-right p-4 font-medium">Valor</th>
                 <th className="text-left p-4 font-medium">Status</th>
                 <th className="text-right p-4 font-medium">Ação</th>
@@ -124,6 +199,7 @@ function Financas() {
             <tbody>
               {paginated.map((s) => {
                 const p = patients.find((x) => x.id === s.patient_id);
+                const meta = PAYMENT_META[s.payment_status as PaymentStatus];
                 return (
                   <tr key={s.id} className="border-b border-border last:border-0">
                     <td className="p-4">
@@ -140,8 +216,8 @@ function Financas() {
                     </td>
                     <td className="p-4 text-right tabular-nums">R$ {s.value}</td>
                     <td className="p-4">
-                      <span className={`text-xs px-2 py-1 rounded-full ${s.payment_status === "paid" ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground"}`}>
-                        {s.payment_status === "paid" ? "Pago" : "Pendente"}
+                      <span className={`text-xs px-2 py-1 rounded-full ${meta.className}`}>
+                        {meta.label}
                       </span>
                     </td>
                     <td className="p-4 text-right">
