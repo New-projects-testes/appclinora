@@ -1,8 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
+import { PatientAvatar } from "@/components/PatientAvatar";
+import { Button } from "@/components/ui/button";
 import { sessions as initial, patients } from "@/lib/mock-data";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 10;
 
 export const Route = createFileRoute("/financas")({
   component: Financas,
@@ -14,6 +19,8 @@ function Financas() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [period]);
 
   const filtered = useMemo(() => {
     const [y, m] = period.split("-").map(Number);
@@ -29,6 +36,10 @@ function Financas() {
 
   const markPaid = (id: string) =>
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, payment_status: "paid" } : s)));
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <AppShell>
@@ -66,14 +77,17 @@ function Financas() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s) => {
+              {paginated.map((s) => {
                 const p = patients.find((x) => x.id === s.patient_id);
                 return (
                   <tr key={s.id} className="border-b border-border last:border-0">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <img src={p?.avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
-                        <span className="font-medium">{p?.name}</span>
+                        <PatientAvatar name={p?.name ?? "?"} src={p?.avatar} size={36} />
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{p?.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{p?.email}</p>
+                        </div>
                       </div>
                     </td>
                     <td className="p-4 text-sm text-muted-foreground">
@@ -100,6 +114,23 @@ function Financas() {
               )}
             </tbody>
           </table>
+
+          {filtered.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm text-muted-foreground">
+              <span>
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span>Página {currentPage} de {totalPages}</span>
+                <Button variant="outline" size="sm" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </AppShell>
