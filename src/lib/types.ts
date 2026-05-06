@@ -1,9 +1,20 @@
 export type Tag = { id: string; name: string };
 
+export type PatientStatus = "ativo" | "em_pausa" | "inativo" | "encerrado";
+
 export type Patient = {
   id: string;
   name: string;
+  email: string;
   phone: string;
+  birthDate?: string;
+  gender?: string;
+  notes?: string;
+  isMinor?: boolean;
+  guardianName?: string;
+  guardianEmail?: string;
+  guardianPhone?: string;
+  status: PatientStatus;
   tags: string[];
   lastSession?: string;
   avatar?: string;
