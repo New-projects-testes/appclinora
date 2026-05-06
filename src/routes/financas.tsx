@@ -19,6 +19,8 @@ function Financas() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [period]);
 
   const filtered = useMemo(() => {
     const [y, m] = period.split("-").map(Number);
