@@ -512,10 +512,10 @@ function SessionTimelineItem({ session }: { session: Session }) {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="px-4 pb-4 pt-0 border-t border-border mx-4">
+          <div className="px-4 pb-4 pt-0 border-t border-border mx-4 min-w-0">
             {session.notes ? (
               <div
-                className="rt-content text-sm text-foreground pt-3"
+                className="rt-content text-sm text-foreground pt-3 max-h-[320px] overflow-y-auto break-words [overflow-wrap:anywhere]"
                 dangerouslySetInnerHTML={{ __html: session.notes }}
               />
             ) : (
