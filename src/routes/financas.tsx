@@ -5,7 +5,14 @@ import { PatientAvatar } from "@/components/PatientAvatar";
 import { Button } from "@/components/ui/button";
 import { sessions as initial, patients } from "@/lib/mock-data";
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const PAYMENT_META = {
+  paid: { label: "Pago", description: "Sessão já recebida", className: "bg-success/15 text-success" },
+  pending: { label: "Pendente", description: "Aguardando pagamento", className: "bg-warning/20 text-warning-foreground" },
+} as const;
+type PaymentStatus = keyof typeof PAYMENT_META;
 
 const PAGE_SIZE = 10;
 
