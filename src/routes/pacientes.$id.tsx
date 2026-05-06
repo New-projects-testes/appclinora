@@ -190,12 +190,14 @@ function PatientDetail() {
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="font-display text-3xl truncate">{patient.name}</h1>
                 <Select value={status} onValueChange={(v) => setStatus(v as PatientStatus)}>
-                  <SelectTrigger className="h-7 w-[130px] text-xs">
+                  <SelectTrigger className={cn("h-7 w-[130px] border-0 text-xs font-medium", STATUS_META[status].cls)}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(STATUS_LABEL) as PatientStatus[]).map((s) => (
-                      <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+                    {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
+                      <SelectItem key={s} value={s} className="focus:bg-muted/60 focus:text-foreground">
+                        {STATUS_META[s].label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -203,7 +205,7 @@ function PatientDetail() {
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 mt-3 text-sm text-muted-foreground">
                 <InfoRow icon={<Mail className="h-3.5 w-3.5" />} value={patient.email} />
-                <InfoRow icon={<Phone className="h-3.5 w-3.5" />} value={patient.phone} />
+                <InfoRow icon={<MessageSquare className="h-3.5 w-3.5" />} value={patient.phone} />
                 {patient.birthDate && (
                   <InfoRow
                     icon={<Calendar className="h-3.5 w-3.5" />}
@@ -215,26 +217,15 @@ function PatientDetail() {
                 )}
               </div>
 
-              {patient.tags.length > 0 && (
-                <div className="flex gap-1.5 mt-3 flex-wrap">
-                  {patient.tags.map((tid) => {
-                    const tag = tags.find((t) => t.id === tid);
-                    return tag ? (
-                      <span key={tid} className="text-xs bg-accent/15 text-accent rounded-full px-2.5 py-0.5">{tag.name}</span>
-                    ) : null;
-                  })}
-                </div>
-              )}
-
               {patient.isMinor && (
                 <div className="mt-4 border border-border rounded-lg p-3 bg-muted/30">
                   <p className="text-xs font-medium text-foreground inline-flex items-center gap-1.5 mb-1.5">
                     <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Responsável legal
                   </p>
                   <div className="grid sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {patient.guardianName && <span>{patient.guardianName}</span>}
-                    {patient.guardianEmail && <span>{patient.guardianEmail}</span>}
-                    {patient.guardianPhone && <span>{patient.guardianPhone}</span>}
+                    {patient.guardianName && <span className="inline-flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{patient.guardianName}</span>}
+                    {patient.guardianEmail && <span className="inline-flex items-center gap-1.5"><Mail className="h-3 w-3" />{patient.guardianEmail}</span>}
+                    {patient.guardianPhone && <span className="inline-flex items-center gap-1.5"><Phone className="h-3 w-3" />{patient.guardianPhone}</span>}
                   </div>
                 </div>
               )}
@@ -244,7 +235,7 @@ function PatientDetail() {
               )}
             </div>
 
-            <Button className="rounded-lg shrink-0">
+            <Button onClick={() => setOpenSchedule(true)} className="rounded-lg shrink-0">
               <Plus className="h-4 w-4" /> Nova sessão
             </Button>
           </div>
