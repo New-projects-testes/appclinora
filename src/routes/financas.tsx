@@ -37,6 +37,10 @@ function Financas() {
   const markPaid = (id: string) =>
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, payment_status: "paid" } : s)));
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <AppShell>
       <div className="px-6 md:px-10 py-10 max-w-7xl">
