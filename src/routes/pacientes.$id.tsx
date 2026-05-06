@@ -77,6 +77,7 @@ function PatientDetail() {
   const [status, setStatus] = useState<PatientStatus>(patient?.status ?? "ativo");
   const [allSessions, setAllSessions] = useState<Session[]>(initialSessions);
   const [tab, setTab] = useState("atendimentos");
+  const [openSchedule, setOpenSchedule] = useState(false);
 
   // Editor state
   const [draft, setDraft] = useState("");
