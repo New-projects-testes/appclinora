@@ -5,8 +5,10 @@ import type { PatientStatus, Session } from "@/lib/types";
 import { useMemo, useState } from "react";
 import {
   Phone, Mail, Calendar, User as UserIcon, FileText, ChevronDown,
-  Save, Plus, Clock, CircleDollarSign, ShieldCheck, MessageSquare,
+  Save, Plus, Clock, CircleDollarSign, ShieldCheck, MessageSquare, Pencil,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
