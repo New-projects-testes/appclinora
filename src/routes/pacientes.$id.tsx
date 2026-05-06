@@ -186,7 +186,7 @@ function PatientDetail() {
         <div className="bg-card border border-border rounded-2xl p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <PatientAvatar name={patient.name} src={patient.avatar} size={96} className="text-3xl" />
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 w-full">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="font-display text-3xl truncate">{patient.name}</h1>
                 <Select value={status} onValueChange={(v) => setStatus(v as PatientStatus)}>
@@ -201,37 +201,56 @@ function PatientDetail() {
                     ))}
                   </SelectContent>
                 </Select>
+                {patient.isMinor && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md bg-accent/10 text-accent">
+                    <ShieldCheck className="h-3 w-3" /> Menor de idade
+                  </span>
+                )}
               </div>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 mt-3 text-sm text-muted-foreground">
-                <InfoRow icon={<Mail className="h-3.5 w-3.5" />} value={patient.email} />
-                <InfoRow icon={<MessageSquare className="h-3.5 w-3.5" />} value={patient.phone} />
-                {patient.birthDate && (
-                  <InfoRow
-                    icon={<Calendar className="h-3.5 w-3.5" />}
-                    value={`${new Date(patient.birthDate).toLocaleDateString("pt-BR")}${age !== null ? ` · ${age} anos` : ""}`}
-                  />
-                )}
-                {patient.gender && (
-                  <InfoRow icon={<UserIcon className="h-3.5 w-3.5" />} value={GENDER_LABEL[patient.gender] ?? patient.gender} />
-                )}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 mt-5">
+                <InfoField icon={<Mail className="h-3.5 w-3.5" />} label="E-mail" value={patient.email} />
+                <InfoField icon={<Phone className="h-3.5 w-3.5" />} label="WhatsApp" value={patient.phone} />
+                <InfoField
+                  icon={<Calendar className="h-3.5 w-3.5" />}
+                  label="Nascimento"
+                  value={patient.birthDate ? `${new Date(patient.birthDate).toLocaleDateString("pt-BR")}${age !== null ? ` · ${age} anos` : ""}` : "—"}
+                />
+                <InfoField
+                  icon={<UserIcon className="h-3.5 w-3.5" />}
+                  label="Gênero"
+                  value={patient.gender ? (GENDER_LABEL[patient.gender] ?? patient.gender) : "—"}
+                />
+                <InfoField
+                  icon={<Clock className="h-3.5 w-3.5" />}
+                  label="Última sessão"
+                  value={patient.lastSession ? new Date(patient.lastSession).toLocaleDateString("pt-BR") : "—"}
+                />
+                <InfoField
+                  icon={<FileText className="h-3.5 w-3.5" />}
+                  label="Tags"
+                  value={patient.tags.length ? patient.tags.join(", ") : "—"}
+                />
               </div>
 
               {patient.isMinor && (
-                <div className="mt-4 border border-border rounded-lg p-3 bg-muted/30">
-                  <p className="text-xs font-medium text-foreground inline-flex items-center gap-1.5 mb-1.5">
+                <div className="mt-5 border border-border rounded-xl p-4 bg-muted/30">
+                  <p className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5 mb-3">
                     <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Responsável legal
                   </p>
-                  <div className="grid sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {patient.guardianName && <span className="inline-flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{patient.guardianName}</span>}
-                    {patient.guardianEmail && <span className="inline-flex items-center gap-1.5"><Mail className="h-3 w-3" />{patient.guardianEmail}</span>}
-                    {patient.guardianPhone && <span className="inline-flex items-center gap-1.5"><Phone className="h-3 w-3" />{patient.guardianPhone}</span>}
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+                    <InfoField icon={<UserIcon className="h-3.5 w-3.5" />} label="Nome" value={patient.guardianName ?? "—"} />
+                    <InfoField icon={<Mail className="h-3.5 w-3.5" />} label="E-mail" value={patient.guardianEmail ?? "—"} />
+                    <InfoField icon={<Phone className="h-3.5 w-3.5" />} label="WhatsApp" value={patient.guardianPhone ?? "—"} />
                   </div>
                 </div>
               )}
 
               {patient.notes && (
-                <p className="mt-3 text-sm text-muted-foreground italic">"{patient.notes}"</p>
+                <div className="mt-5 border-l-2 border-primary/40 pl-3">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Observações</p>
+                  <p className="text-sm text-foreground/80 leading-relaxed">{patient.notes}</p>
+                </div>
               )}
             </div>
 
@@ -470,12 +489,14 @@ function ScheduleSessionDialog({
   );
 }
 
-function InfoRow({ icon, value }: { icon: React.ReactNode; value: string }) {
+function InfoField({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 truncate">
-      <span className="text-muted-foreground/70">{icon}</span>
-      {value}
-    </span>
+    <div className="min-w-0">
+      <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground/70 inline-flex items-center gap-1.5 mb-1">
+        <span>{icon}</span>{label}
+      </p>
+      <p className="text-sm text-foreground truncate">{value}</p>
+    </div>
   );
 }
 
