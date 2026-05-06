@@ -258,9 +258,14 @@ function PatientDetail() {
               )}
             </div>
 
-            <Button onClick={() => setOpenSchedule(true)} className="rounded-lg shrink-0">
-              <Plus className="h-4 w-4" /> Nova sessão
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="icon" className="rounded-lg" onClick={() => setOpenEdit(true)} aria-label="Editar paciente">
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button onClick={() => setOpenSchedule(true)} className="rounded-lg">
+                <Plus className="h-4 w-4" /> Nova sessão
+              </Button>
+            </div>
           </div>
         </div>
 
