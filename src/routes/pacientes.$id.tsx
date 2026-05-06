@@ -1,8 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { patients, sessions, tags, annotations as initial, sessionTemplates } from "@/lib/mock-data";
+import type { PatientStatus } from "@/lib/types";
 import { useState } from "react";
-import { ArrowLeft, Phone, Plus, X, Save, FileText } from "lucide-react";
+import { ArrowLeft, Phone, Mail, Plus, X, Save, FileText } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const STATUS_LABEL: Record<PatientStatus, string> = {
+  ativo: "Ativo",
+  em_pausa: "Em pausa",
+  inativo: "Inativo",
+  encerrado: "Encerrado",
+};
 
 export const Route = createFileRoute("/pacientes/$id")({
   component: PatientDetail,
@@ -11,6 +20,7 @@ export const Route = createFileRoute("/pacientes/$id")({
 function PatientDetail() {
   const { id } = Route.useParams();
   const patient = patients.find((p) => p.id === id);
+  const [status, setStatus] = useState<PatientStatus>(patient?.status ?? "ativo");
   const [patientTags, setPatientTags] = useState<string[]>(patient?.tags ?? []);
   const [notes, setNotes] = useState(initial[id] ?? []);
   const [draft, setDraft] = useState("");
@@ -58,10 +68,25 @@ function PatientDetail() {
             <img src={patient.avatar} alt="" className="h-20 w-20 rounded-full object-cover" />
             <div className="flex-1">
               <h1 className="font-display text-3xl">{patient.name}</h1>
-              <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5 mt-1">
-                <Phone className="h-3.5 w-3.5" /> {patient.phone}
-              </p>
-              <div className="flex gap-1.5 flex-wrap mt-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 mt-1">
+                <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5" /> {patient.email}
+                </p>
+                <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" /> {patient.phone}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <Select value={status} onValueChange={(v) => setStatus(v as PatientStatus)}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(STATUS_LABEL) as PatientStatus[]).map((s) => (
+                      <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {patientTags.map((tid) => {
                   const tag = tags.find((t) => t.id === tid);
                   return tag ? (
