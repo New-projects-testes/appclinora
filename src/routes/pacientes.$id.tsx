@@ -419,36 +419,34 @@ function SessionTimelineItem({ session }: { session: Session }) {
   return (
     <div className="relative">
       <span className="absolute -left-[22px] top-3 h-3 w-3 rounded-full bg-primary ring-4 ring-background" />
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger className="w-full text-left">
-          <div className="border border-border rounded-xl p-4 hover:border-primary/40 transition-colors">
-            <div className="flex items-center gap-3 flex-wrap">
-              <FileText className="h-4 w-4 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{fmtDate(session.date_time)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {fmtTime(session.date_time)} · {session.duration_minutes} min
-                </p>
-              </div>
-              <span className={cn("text-xs px-2.5 py-1 rounded-full", PAY_META[session.payment_status].cls)}>
-                {PAY_META[session.payment_status].label}
-              </span>
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+      <Collapsible open={open} onOpenChange={setOpen} className="border border-border rounded-xl hover:border-primary/40 transition-colors">
+        <CollapsibleTrigger className="w-full text-left p-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <FileText className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">{fmtDate(session.date_time)}</p>
+              <p className="text-xs text-muted-foreground">
+                {fmtTime(session.date_time)} · {session.duration_minutes} min
+              </p>
             </div>
-            <CollapsibleContent>
-              <div className="mt-4 pt-4 border-t border-border">
-                {session.notes ? (
-                  <div
-                    className="rt-content text-sm text-foreground"
-                    dangerouslySetInnerHTML={{ __html: session.notes }}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">Sem anotações registradas.</p>
-                )}
-              </div>
-            </CollapsibleContent>
+            <span className={cn("text-xs px-2.5 py-1 rounded-full", PAY_META[session.payment_status].cls)}>
+              {PAY_META[session.payment_status].label}
+            </span>
+            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
           </div>
         </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-4 pb-4 pt-0 border-t border-border mx-4">
+            {session.notes ? (
+              <div
+                className="rt-content text-sm text-foreground pt-3"
+                dangerouslySetInnerHTML={{ __html: session.notes }}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground italic pt-3">Sem anotações registradas.</p>
+            )}
+          </div>
+        </CollapsibleContent>
       </Collapsible>
     </div>
   );
