@@ -1,8 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
+import { PatientAvatar } from "@/components/PatientAvatar";
+import { Button } from "@/components/ui/button";
 import { sessions as initial, patients } from "@/lib/mock-data";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 10;
 
 export const Route = createFileRoute("/financas")({
   component: Financas,
