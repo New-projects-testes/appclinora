@@ -66,7 +66,7 @@ function PatientDetail() {
 
         <div className="bg-card border border-border rounded-2xl p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            <img src={patient.avatar} alt="" className="h-20 w-20 rounded-full object-cover" />
+            <PatientAvatar name={patient.name} src={patient.avatar} size={80} className="text-2xl" />
             <div className="flex-1">
               <h1 className="font-display text-3xl">{patient.name}</h1>
               <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 mt-1">
