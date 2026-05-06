@@ -69,6 +69,10 @@ export const sessions: Session[] = [
   { id: "s8", patient_id: "p1", date_time: t(9, 0, -14), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "Trabalhamos exposição gradual." },
   { id: "s9", patient_id: "p2", date_time: t(11, 0, -7), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "" },
   { id: "s10", patient_id: "p3", date_time: t(16, 0, -7), duration_minutes: 50, status: "done", payment_status: "pending", value: 220, notes: "" },
+  { id: "s11", patient_id: "p4", date_time: t(14, 30, -7), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "<p>Paciente trouxe relato de melhora no quadro de ansiedade. Trabalhamos <strong>técnicas de respiração diafragmática</strong> e identificação de gatilhos.</p><p>Tarefa de casa: diário de pensamentos automáticos.</p>" },
+  { id: "s12", patient_id: "p4", date_time: t(14, 30, -14), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "<p>Sessão focada em <em>reestruturação cognitiva</em>. Identificamos três distorções principais.</p>" },
+  { id: "s13", patient_id: "p4", date_time: t(14, 30, -21), duration_minutes: 50, status: "done", payment_status: "isento", value: 220, notes: "<p>Sessão de acolhimento. Paciente em momento delicado, sessão isenta.</p>" },
+  { id: "s14", patient_id: "p4", date_time: t(14, 30, -28), duration_minutes: 50, status: "done", payment_status: "pending", value: 220, notes: "<h3>Anamnese</h3><p>Primeira consulta. Queixa principal: ansiedade no trabalho.</p>" },
 ];
 
 export const tasks: Task[] = [
@@ -100,7 +104,40 @@ export const catalog: Professional[] = [
 ];
 
 export const sessionTemplates = [
-  { id: "tpl1", name: "TCC — Sessão padrão", approach: "Cognitivo-Comportamental", content: "Humor inicial:\nPauta da sessão:\nReavaliação cognitiva:\nTarefa de casa:" },
-  { id: "tpl2", name: "Psicanálise — Associação livre", approach: "Psicanálise", content: "Conteúdo manifesto:\nConteúdo latente:\nTransferência:\nIntervenção:" },
-  { id: "tpl3", name: "Humanista — ACP", approach: "Humanista", content: "Experiência relatada:\nSentimentos predominantes:\nPotencial de crescimento:" },
+  {
+    id: "tpl1",
+    name: "TCC — Sessão padrão",
+    approach: "Cognitivo-Comportamental",
+    content: `<h3>Humor inicial</h3><p>Avaliação subjetiva (0–10): </p><h3>Pauta da sessão</h3><ul><li>Revisão da tarefa de casa</li><li>Tema central</li><li>Técnica aplicada</li></ul><h3>Reestruturação cognitiva</h3><p>Pensamento automático identificado: </p><p>Distorção: </p><p>Pensamento alternativo: </p><h3>Tarefa de casa</h3><p></p>`,
+  },
+  {
+    id: "tpl2",
+    name: "Psicanálise — Associação livre",
+    approach: "Psicanálise",
+    content: `<h3>Conteúdo manifesto</h3><p></p><h3>Conteúdo latente</h3><p></p><h3>Transferência / contratransferência</h3><p></p><h3>Intervenção</h3><p></p>`,
+  },
+  {
+    id: "tpl3",
+    name: "Humanista — ACP",
+    approach: "Abordagem Centrada na Pessoa",
+    content: `<h3>Experiência relatada</h3><p></p><h3>Sentimentos predominantes</h3><p></p><h3>Empatia e congruência</h3><p></p><h3>Potencial de crescimento</h3><p></p>`,
+  },
+  {
+    id: "tpl4",
+    name: "Anamnese inicial",
+    approach: "Genérico",
+    content: `<h3>Identificação</h3><p>Nome, idade, profissão: </p><h3>Queixa principal</h3><p></p><h3>História da queixa</h3><p>Início, frequência, intensidade, fatores desencadeantes: </p><h3>História pessoal</h3><ul><li>Família</li><li>Escolaridade</li><li>Relacionamentos</li><li>Saúde geral</li></ul><h3>Hipótese diagnóstica</h3><p></p><h3>Plano terapêutico</h3><p></p>`,
+  },
+  {
+    id: "tpl5",
+    name: "Sessão de retorno",
+    approach: "Genérico",
+    content: `<h3>Como foi a semana</h3><p></p><h3>Eventos significativos</h3><ul><li></li></ul><h3>Trabalho na sessão</h3><p></p><h3>Encaminhamentos</h3><p></p>`,
+  },
+  {
+    id: "tpl6",
+    name: "Encerramento de processo",
+    approach: "Genérico",
+    content: `<h3>Avaliação do processo</h3><p>Objetivos alcançados: </p><h3>Ganhos identificados pelo paciente</h3><p></p><h3>Recursos desenvolvidos</h3><p></p><h3>Recomendações finais</h3><p></p><h3>Possibilidade de retorno</h3><p></p>`,
+  },
 ];

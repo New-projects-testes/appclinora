@@ -1,11 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { patients, sessions, tags, annotations as initial, sessionTemplates } from "@/lib/mock-data";
-import type { PatientStatus } from "@/lib/types";
-import { useState } from "react";
-import { ArrowLeft, Phone, Mail, Plus, X, Save, FileText } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { patients, sessions as initialSessions, tags, sessionTemplates } from "@/lib/mock-data";
+import type { PatientStatus, Session } from "@/lib/types";
+import { useMemo, useState } from "react";
+import {
+  Phone, Mail, Calendar, User as UserIcon, FileText, ChevronDown,
+  Save, Plus, Clock, CircleDollarSign, ShieldCheck,
+} from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink,
+  BreadcrumbSeparator, BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
+import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
 import { PatientAvatar } from "@/components/PatientAvatar";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { toast } from "sonner";
+import type { Editor } from "@tiptap/react";
+import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<PatientStatus, string> = {
   ativo: "Ativo",
@@ -13,6 +31,36 @@ const STATUS_LABEL: Record<PatientStatus, string> = {
   inativo: "Inativo",
   encerrado: "Encerrado",
 };
+
+const GENDER_LABEL: Record<string, string> = {
+  mulher_cis: "Mulher cis", homem_cis: "Homem cis",
+  mulher_trans: "Mulher trans", homem_trans: "Homem trans",
+  nao_binario: "Não-binário", genero_fluido: "Gênero fluido",
+  agenero: "Agênero", outro: "Outro", prefiro_nao_dizer: "Prefiro não dizer",
+};
+
+type PaymentStatus = Session["payment_status"];
+const PAY_META: Record<PaymentStatus, { label: string; cls: string }> = {
+  paid: { label: "Pago", cls: "bg-success/15 text-success" },
+  pending: { label: "Pendente", cls: "bg-warning/20 text-warning-foreground" },
+  isento: { label: "Isento", cls: "bg-secondary text-secondary-foreground" },
+};
+
+function calcAge(birth?: string) {
+  if (!birth) return null;
+  const d = new Date(birth);
+  if (isNaN(+d)) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+const fmtTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 export const Route = createFileRoute("/pacientes/$id")({
   component: PatientDetail,
@@ -22,10 +70,13 @@ function PatientDetail() {
   const { id } = Route.useParams();
   const patient = patients.find((p) => p.id === id);
   const [status, setStatus] = useState<PatientStatus>(patient?.status ?? "ativo");
-  const [patientTags, setPatientTags] = useState<string[]>(patient?.tags ?? []);
-  const [notes, setNotes] = useState(initial[id] ?? []);
+  const [allSessions, setAllSessions] = useState<Session[]>(initialSessions);
+  const [tab, setTab] = useState("atendimentos");
+
+  // Editor state
   const [draft, setDraft] = useState("");
-  const [template, setTemplate] = useState("");
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [templateId, setTemplateId] = useState("");
 
   if (!patient) {
     return (
@@ -38,48 +89,102 @@ function PatientDetail() {
     );
   }
 
-  const patientSessions = sessions
+  const age = calcAge(patient.birthDate);
+  const patientSessions = allSessions
     .filter((s) => s.patient_id === id)
     .sort((a, b) => +new Date(b.date_time) - +new Date(a.date_time));
 
-  const paidTotal = patientSessions.filter((s) => s.payment_status === "paid").reduce((a, s) => a + s.value, 0);
-  const pendingTotal = patientSessions.filter((s) => s.payment_status === "pending").reduce((a, s) => a + s.value, 0);
-
-  const addNote = () => {
-    if (!draft.trim()) return;
-    setNotes([{ id: String(Date.now()), date: new Date().toISOString(), content: draft }, ...notes]);
-    setDraft("");
-  };
+  const upcoming = [...patientSessions]
+    .reverse()
+    .find((s) => s.status === "scheduled" && new Date(s.date_time) > new Date());
+  const history = patientSessions.filter((s) => s.status === "done");
 
   const applyTemplate = (tplId: string) => {
+    setTemplateId(tplId);
     const tpl = sessionTemplates.find((t) => t.id === tplId);
-    if (tpl) setDraft(tpl.content);
-    setTemplate(tplId);
+    if (tpl && editor) {
+      editor.commands.setContent(tpl.content);
+      setDraft(tpl.content);
+    }
   };
+
+  const saveNotes = () => {
+    if (!draft.trim() || draft === "<p></p>") {
+      toast.error("Escreva alguma anotação antes de salvar.");
+      return;
+    }
+    const target = upcoming;
+    if (target) {
+      setAllSessions((prev) =>
+        prev.map((s) => (s.id === target.id ? { ...s, status: "done", notes: draft } : s)),
+      );
+    } else {
+      const newSession: Session = {
+        id: `s${Date.now()}`,
+        patient_id: id,
+        date_time: new Date().toISOString(),
+        duration_minutes: 50,
+        status: "done",
+        payment_status: "pending",
+        value: 220,
+        notes: draft,
+      };
+      setAllSessions((prev) => [...prev, newSession]);
+    }
+    toast.success("Anotações salvas no histórico");
+    editor?.commands.clearContent();
+    setDraft("");
+    setTemplateId("");
+    setTab("historico");
+  };
+
+  const updatePayment = (sessionId: string, ps: PaymentStatus) => {
+    setAllSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, payment_status: ps } : s)));
+  };
+
+  const fin = useMemo(() => {
+    const done = patientSessions.filter((s) => s.status === "done");
+    const paid = done.filter((s) => s.payment_status === "paid");
+    const pending = done.filter((s) => s.payment_status === "pending");
+    const isento = done.filter((s) => s.payment_status === "isento");
+    return {
+      paidTotal: paid.reduce((a, s) => a + s.value, 0),
+      pendingTotal: pending.reduce((a, s) => a + s.value, 0),
+      isentoTotal: isento.reduce((a, s) => a + s.value, 0),
+      totalCount: done.length,
+      paidCount: paid.length,
+      pendingCount: pending.length,
+      isentoCount: isento.length,
+    };
+  }, [patientSessions]);
 
   return (
     <AppShell>
-      <div className="px-6 md:px-10 py-10 max-w-7xl">
-        <Link to="/pacientes" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6">
-          <ArrowLeft className="h-4 w-4" /> Pacientes
-        </Link>
+      <div className="px-6 md:px-10 py-8 max-w-6xl">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-5">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/pacientes">Pacientes</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{patient.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
+        {/* Header */}
         <div className="bg-card border border-border rounded-2xl p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            <PatientAvatar name={patient.name} src={patient.avatar} size={80} className="text-2xl" />
-            <div className="flex-1">
-              <h1 className="font-display text-3xl">{patient.name}</h1>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 mt-1">
-                <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5" /> {patient.email}
-                </p>
-                <p className="text-sm text-muted-foreground inline-flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" /> {patient.phone}
-                </p>
-              </div>
-              <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <PatientAvatar name={patient.name} src={patient.avatar} size={96} className="text-3xl" />
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-display text-3xl truncate">{patient.name}</h1>
                 <Select value={status} onValueChange={(v) => setStatus(v as PatientStatus)}>
-                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                  <SelectTrigger className="h-7 w-[130px] text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -88,121 +193,274 @@ function PatientDetail() {
                     ))}
                   </SelectContent>
                 </Select>
-                {patientTags.map((tid) => {
-                  const tag = tags.find((t) => t.id === tid);
-                  return tag ? (
-                    <span key={tid} className="inline-flex items-center gap-1 text-xs bg-accent/20 text-accent-foreground rounded-full pl-2.5 pr-1 py-0.5">
-                      {tag.name}
-                      <button onClick={() => setPatientTags(patientTags.filter((x) => x !== tid))} className="p-0.5 hover:bg-black/10 rounded-full">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ) : null;
-                })}
-                <select
-                  value=""
-                  onChange={(e) => e.target.value && setPatientTags([...patientTags, e.target.value])}
-                  className="text-xs bg-secondary rounded-full px-2.5 py-0.5 border-0"
-                >
-                  <option value="">+ tag</option>
-                  {tags.filter((t) => !patientTags.includes(t.id)).map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <button className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-full px-4 py-2 text-sm hover:bg-primary/90">
-              <Save className="h-4 w-4" /> Salvar prontuário
-            </button>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <section className="bg-card border border-border rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display text-xl">Anotações</h2>
-                <select
-                  value={template}
-                  onChange={(e) => applyTemplate(e.target.value)}
-                  className="text-xs bg-secondary rounded-lg px-3 py-1.5 border-0"
-                >
-                  <option value="">Usar template...</option>
-                  {sessionTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Escreva uma nova anotação..."
-                rows={5}
-                className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-              />
-              <div className="flex justify-end mt-3">
-                <button onClick={addNote} className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-full px-4 py-2 text-sm hover:bg-primary/90">
-                  <Plus className="h-4 w-4" /> Adicionar
-                </button>
               </div>
 
-              <div className="mt-6 space-y-4">
-                {notes.map((n) => (
-                  <div key={n.id} className="border-l-2 border-primary/40 pl-4 py-1">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                      {new Date(n.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
-                    </p>
-                    <p className="text-sm mt-1 whitespace-pre-wrap">{n.content}</p>
-                  </div>
-                ))}
-                {notes.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-6">Nenhuma anotação ainda.</p>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 mt-3 text-sm text-muted-foreground">
+                <InfoRow icon={<Mail className="h-3.5 w-3.5" />} value={patient.email} />
+                <InfoRow icon={<Phone className="h-3.5 w-3.5" />} value={patient.phone} />
+                {patient.birthDate && (
+                  <InfoRow
+                    icon={<Calendar className="h-3.5 w-3.5" />}
+                    value={`${new Date(patient.birthDate).toLocaleDateString("pt-BR")}${age !== null ? ` · ${age} anos` : ""}`}
+                  />
+                )}
+                {patient.gender && (
+                  <InfoRow icon={<UserIcon className="h-3.5 w-3.5" />} value={GENDER_LABEL[patient.gender] ?? patient.gender} />
                 )}
               </div>
+
+              {patient.tags.length > 0 && (
+                <div className="flex gap-1.5 mt-3 flex-wrap">
+                  {patient.tags.map((tid) => {
+                    const tag = tags.find((t) => t.id === tid);
+                    return tag ? (
+                      <span key={tid} className="text-xs bg-accent/15 text-accent rounded-full px-2.5 py-0.5">{tag.name}</span>
+                    ) : null;
+                  })}
+                </div>
+              )}
+
+              {patient.isMinor && (
+                <div className="mt-4 border border-border rounded-lg p-3 bg-muted/30">
+                  <p className="text-xs font-medium text-foreground inline-flex items-center gap-1.5 mb-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Responsável legal
+                  </p>
+                  <div className="grid sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {patient.guardianName && <span>{patient.guardianName}</span>}
+                    {patient.guardianEmail && <span>{patient.guardianEmail}</span>}
+                    {patient.guardianPhone && <span>{patient.guardianPhone}</span>}
+                  </div>
+                </div>
+              )}
+
+              {patient.notes && (
+                <p className="mt-3 text-sm text-muted-foreground italic">"{patient.notes}"</p>
+              )}
+            </div>
+
+            <Button className="rounded-lg shrink-0">
+              <Plus className="h-4 w-4" /> Nova sessão
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="bg-transparent border-b border-border w-full justify-start rounded-none h-auto p-0 mb-6">
+            <TabTrigger value="atendimentos">Atendimentos</TabTrigger>
+            <TabTrigger value="historico">Histórico de sessões</TabTrigger>
+            <TabTrigger value="financeiro">Financeiro</TabTrigger>
+          </TabsList>
+
+          {/* TAB: Atendimentos */}
+          <TabsContent value="atendimentos" className="space-y-6 mt-0">
+            <section className="bg-card border border-border rounded-2xl p-6">
+              <h2 className="font-display text-lg mb-4">Próxima sessão</h2>
+              {upcoming ? (
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="bg-primary/8 text-primary rounded-xl px-4 py-3 text-center min-w-[80px]">
+                    <p className="text-2xl font-display leading-none">{new Date(upcoming.date_time).getDate().toString().padStart(2, "0")}</p>
+                    <p className="text-xs uppercase mt-1">{new Date(upcoming.date_time).toLocaleDateString("pt-BR", { month: "short" }).replace(".", "")}</p>
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <p className="text-sm font-medium">{fmtDate(upcoming.date_time)}</p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                      <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {fmtTime(upcoming.date_time)} · {upcoming.duration_minutes} min</span>
+                      <span className="inline-flex items-center gap-1"><CircleDollarSign className="h-3 w-3" /> R$ {upcoming.value}</span>
+                    </div>
+                  </div>
+                  <span className={cn("text-xs px-2.5 py-1 rounded-full", PAY_META[upcoming.payment_status].cls)}>
+                    {PAY_META[upcoming.payment_status].label}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  <p>Nenhuma sessão agendada.</p>
+                  <Button variant="outline" size="sm" className="mt-3 rounded-lg">
+                    <Plus className="h-4 w-4" /> Agendar sessão
+                  </Button>
+                </div>
+              )}
             </section>
 
             <section className="bg-card border border-border rounded-2xl p-6">
-              <h2 className="font-display text-xl mb-4">Histórico de sessões</h2>
-              <div className="space-y-2">
-                {patientSessions.map((s) => (
-                  <div key={s.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-secondary/40">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{new Date(s.date_time).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{s.notes || "Sem resumo"}</p>
-                    </div>
-                    <span className="text-sm tabular-nums">R$ {s.value}</span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${s.payment_status === "paid" ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground"}`}>
-                      {s.payment_status === "paid" ? "Pago" : "Pendente"}
-                    </span>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                <h2 className="font-display text-lg">Anotações da sessão</h2>
+                <Select value={templateId} onValueChange={applyTemplate}>
+                  <SelectTrigger className="w-[260px] h-9">
+                    <SelectValue placeholder="Aplicar template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessionTemplates.map((t) => (
+                      <SelectItem key={t.id} value={t.id} className="focus:bg-muted/60">
+                        <div className="flex flex-col">
+                          <span className="text-sm">{t.name}</span>
+                          <span className="text-xs text-muted-foreground">{t.approach}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <RichTextEditor
+                value={draft}
+                onChange={setDraft}
+                placeholder="Comece a escrever ou aplique um template..."
+                onReady={setEditor}
+              />
+
+              <div className="flex justify-end mt-4">
+                <Button onClick={saveNotes} className="rounded-lg">
+                  <Save className="h-4 w-4" /> Salvar anotações
+                </Button>
               </div>
             </section>
-          </div>
+          </TabsContent>
 
-          <aside className="space-y-6">
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <h3 className="font-display text-lg mb-4">Financeiro</h3>
-              <div className="space-y-3">
-                <Row label="Total recebido" value={`R$ ${paidTotal.toLocaleString("pt-BR")}`} accent="success" />
-                <Row label="Pendente" value={`R$ ${pendingTotal.toLocaleString("pt-BR")}`} accent="warning" />
-                <Row label="Sessões" value={patientSessions.length.toString()} />
-              </div>
+          {/* TAB: Histórico */}
+          <TabsContent value="historico" className="mt-0">
+            <section className="bg-card border border-border rounded-2xl p-6">
+              <h2 className="font-display text-lg mb-6">Histórico de sessões</h2>
+              {history.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma sessão registrada ainda.</p>
+              ) : (
+                <div className="relative pl-6">
+                  <div className="absolute left-[7px] top-2 bottom-2 w-px bg-border" />
+                  <div className="space-y-3">
+                    {history.map((s) => (
+                      <SessionTimelineItem key={s.id} session={s} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          </TabsContent>
+
+          {/* TAB: Financeiro */}
+          <TabsContent value="financeiro" className="space-y-6 mt-0">
+            <div className="grid sm:grid-cols-3 gap-4">
+              <KpiCard label="Total recebido" value={`R$ ${fin.paidTotal.toLocaleString("pt-BR")}`} sub={`${fin.paidCount} sessões pagas`} accent="success" />
+              <KpiCard label="A receber" value={`R$ ${fin.pendingTotal.toLocaleString("pt-BR")}`} sub={`${fin.pendingCount} pendentes`} accent="warning" />
+              <KpiCard label="Isento" value={`R$ ${fin.isentoTotal.toLocaleString("pt-BR")}`} sub={`${fin.isentoCount} sessões isentas`} />
             </div>
-          </aside>
-        </div>
+
+            <section className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-display text-lg">Extrato de sessões</h2>
+                <span className="text-xs text-muted-foreground">{fin.totalCount} sessões realizadas</span>
+              </div>
+              <table className="w-full">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                    <th className="text-left p-4 font-medium">Data</th>
+                    <th className="text-left p-4 font-medium">Horário</th>
+                    <th className="text-right p-4 font-medium">Valor</th>
+                    <th className="text-left p-4 font-medium w-[180px]">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patientSessions.filter((s) => s.status === "done").map((s) => (
+                    <tr key={s.id} className="border-b border-border last:border-0">
+                      <td className="p-4 text-sm">{fmtDate(s.date_time)}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{fmtTime(s.date_time)}</td>
+                      <td className="p-4 text-sm tabular-nums text-right">R$ {s.value.toLocaleString("pt-BR")}</td>
+                      <td className="p-4">
+                        <Select value={s.payment_status} onValueChange={(v) => updatePayment(s.id, v as PaymentStatus)}>
+                          <SelectTrigger className={cn("h-8 w-[140px] border-0 text-xs font-medium", PAY_META[s.payment_status].cls)}>
+                            <span>{PAY_META[s.payment_status].label}</span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(Object.keys(PAY_META) as PaymentStatus[]).map((k) => (
+                              <SelectItem key={k} value={k} className="focus:bg-muted/60">
+                                {PAY_META[k].label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    </tr>
+                  ))}
+                  {fin.totalCount === 0 && (
+                    <tr><td colSpan={4} className="p-10 text-center text-sm text-muted-foreground">Sem sessões realizadas.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </section>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppShell>
   );
 }
 
-function Row({ label, value, accent }: { label: string; value: string; accent?: "success" | "warning" }) {
+function InfoRow({ icon, value }: { icon: React.ReactNode; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 truncate">
+      <span className="text-muted-foreground/70">{icon}</span>
+      {value}
+    </span>
+  );
+}
+
+function TabTrigger({ value, children }: { value: string; children: React.ReactNode }) {
+  return (
+    <TabsTrigger
+      value={value}
+      className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none hover:text-foreground"
+    >
+      {children}
+    </TabsTrigger>
+  );
+}
+
+function SessionTimelineItem({ session }: { session: Session }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <span className="absolute -left-[22px] top-3 h-3 w-3 rounded-full bg-primary ring-4 ring-background" />
+      <Collapsible open={open} onOpenChange={setOpen} className="border border-border rounded-xl hover:border-primary/40 transition-colors">
+        <CollapsibleTrigger className="w-full text-left p-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <FileText className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">{fmtDate(session.date_time)}</p>
+              <p className="text-xs text-muted-foreground">
+                {fmtTime(session.date_time)} · {session.duration_minutes} min
+              </p>
+            </div>
+            <span className={cn("text-xs px-2.5 py-1 rounded-full", PAY_META[session.payment_status].cls)}>
+              {PAY_META[session.payment_status].label}
+            </span>
+            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-4 pb-4 pt-0 border-t border-border mx-4">
+            {session.notes ? (
+              <div
+                className="rt-content text-sm text-foreground pt-3"
+                dangerouslySetInnerHTML={{ __html: session.notes }}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground italic pt-3">Sem anotações registradas.</p>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
+
+function KpiCard({
+  label, value, sub, accent,
+}: { label: string; value: string; sub: string; accent?: "success" | "warning" }) {
   const cls = accent === "success" ? "text-success" : accent === "warning" ? "text-warning-foreground" : "text-foreground";
   return (
-    <div className="flex justify-between items-baseline border-b border-border pb-3 last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={`font-display text-xl tabular-nums ${cls}`}>{value}</span>
+    <div className="bg-card border border-border rounded-2xl p-5">
+      <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className={cn("font-display text-2xl mt-2 tabular-nums", cls)}>{value}</p>
+      <p className="text-xs text-muted-foreground mt-1">{sub}</p>
     </div>
   );
 }
