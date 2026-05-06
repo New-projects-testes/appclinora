@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { patients as initialPatients } from "@/lib/mock-data";
 import type { Patient, PatientStatus } from "@/lib/types";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
