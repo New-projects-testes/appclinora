@@ -289,9 +289,14 @@ function PatientDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     {sessionTemplates.map((t) => (
-                      <SelectItem key={t.id} value={t.id} className="focus:bg-muted/60">
+                      <SelectItem
+                        key={t.id}
+                        value={t.id}
+                        textValue={t.name}
+                        className="focus:bg-muted/60 focus:text-foreground"
+                      >
                         <div className="flex flex-col">
-                          <span className="text-sm">{t.name}</span>
+                          <span className="text-sm text-foreground">{t.name}</span>
                           <span className="text-xs text-muted-foreground">{t.approach}</span>
                         </div>
                       </SelectItem>
