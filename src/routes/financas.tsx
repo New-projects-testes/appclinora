@@ -70,7 +70,7 @@ function Financas() {
             <thead>
               <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="text-left p-4 font-medium">Paciente</th>
-                <th className="text-left p-4 font-medium">Data</th>
+                <th className="text-left p-4 font-medium">Última sessão</th>
                 <th className="text-right p-4 font-medium">Valor</th>
                 <th className="text-left p-4 font-medium">Status</th>
                 <th className="text-right p-4 font-medium">Ação</th>
