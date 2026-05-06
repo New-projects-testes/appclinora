@@ -392,7 +392,81 @@ function PatientDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ScheduleSessionDialog
+        open={openSchedule}
+        onOpenChange={setOpenSchedule}
+        onCreate={(s) => {
+          setAllSessions((prev) => [...prev, { ...s, patient_id: id }]);
+          toast.success("Sessão agendada");
+        }}
+      />
     </AppShell>
+  );
+}
+
+function ScheduleSessionDialog({
+  open, onOpenChange, onCreate,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreate: (s: Omit<Session, "patient_id">) => void;
+}) {
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("09:00");
+  const [duration, setDuration] = useState(50);
+  const [value, setValue] = useState(220);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!date) { toast.error("Selecione uma data"); return; }
+    const iso = new Date(`${date}T${time}:00`).toISOString();
+    onCreate({
+      id: `s${Date.now()}`,
+      date_time: iso,
+      duration_minutes: duration,
+      status: "scheduled",
+      payment_status: "pending",
+      value,
+      notes: "",
+    });
+    setDate(""); setTime("09:00"); setDuration(50); setValue(220);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Agendar nova sessão</DialogTitle>
+          <DialogDescription>Defina data, horário e valor da sessão.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="date">Data</Label>
+              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="time">Horário</Label>
+              <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="dur">Duração (min)</Label>
+              <Input id="dur" type="number" min={10} max={240} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="val">Valor (R$)</Label>
+              <Input id="val" type="number" min={0} value={value} onChange={(e) => setValue(Number(e.target.value))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit" className="rounded-lg">Agendar</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
