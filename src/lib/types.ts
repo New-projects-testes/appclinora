@@ -26,7 +26,7 @@ export type Session = {
   date_time: string;
   duration_minutes: number;
   status: "scheduled" | "done" | "cancelled";
-  payment_status: "pending" | "paid";
+  payment_status: "pending" | "paid" | "isento";
   value: number;
   notes?: string;
 };
