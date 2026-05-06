@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { patients, sessions as initialSessions, tags, sessionTemplates } from "@/lib/mock-data";
+import { patients, sessions as initialSessions, sessionTemplates } from "@/lib/mock-data";
 import type { PatientStatus, Session } from "@/lib/types";
 import { useMemo, useState } from "react";
 import {
   Phone, Mail, Calendar, User as UserIcon, FileText, ChevronDown,
-  Save, Plus, Clock, CircleDollarSign, ShieldCheck,
+  Save, Plus, Clock, CircleDollarSign, ShieldCheck, MessageSquare,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -18,6 +18,11 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { PatientAvatar } from "@/components/PatientAvatar";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -25,11 +30,11 @@ import { toast } from "sonner";
 import type { Editor } from "@tiptap/react";
 import { cn } from "@/lib/utils";
 
-const STATUS_LABEL: Record<PatientStatus, string> = {
-  ativo: "Ativo",
-  em_pausa: "Em pausa",
-  inativo: "Inativo",
-  encerrado: "Encerrado",
+const STATUS_META: Record<PatientStatus, { label: string; cls: string }> = {
+  ativo: { label: "Ativo", cls: "bg-success/15 text-success" },
+  em_pausa: { label: "Em pausa", cls: "bg-warning/20 text-warning-foreground" },
+  inativo: { label: "Inativo", cls: "bg-muted text-muted-foreground" },
+  encerrado: { label: "Encerrado", cls: "bg-secondary text-secondary-foreground" },
 };
 
 const GENDER_LABEL: Record<string, string> = {
@@ -72,6 +77,7 @@ function PatientDetail() {
   const [status, setStatus] = useState<PatientStatus>(patient?.status ?? "ativo");
   const [allSessions, setAllSessions] = useState<Session[]>(initialSessions);
   const [tab, setTab] = useState("atendimentos");
+  const [openSchedule, setOpenSchedule] = useState(false);
 
   // Editor state
   const [draft, setDraft] = useState("");
@@ -184,12 +190,14 @@ function PatientDetail() {
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="font-display text-3xl truncate">{patient.name}</h1>
                 <Select value={status} onValueChange={(v) => setStatus(v as PatientStatus)}>
-                  <SelectTrigger className="h-7 w-[130px] text-xs">
+                  <SelectTrigger className={cn("h-7 w-[130px] border-0 text-xs font-medium", STATUS_META[status].cls)}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(STATUS_LABEL) as PatientStatus[]).map((s) => (
-                      <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+                    {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
+                      <SelectItem key={s} value={s} className="focus:bg-muted/60 focus:text-foreground">
+                        {STATUS_META[s].label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -197,7 +205,7 @@ function PatientDetail() {
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 mt-3 text-sm text-muted-foreground">
                 <InfoRow icon={<Mail className="h-3.5 w-3.5" />} value={patient.email} />
-                <InfoRow icon={<Phone className="h-3.5 w-3.5" />} value={patient.phone} />
+                <InfoRow icon={<MessageSquare className="h-3.5 w-3.5" />} value={patient.phone} />
                 {patient.birthDate && (
                   <InfoRow
                     icon={<Calendar className="h-3.5 w-3.5" />}
@@ -209,26 +217,15 @@ function PatientDetail() {
                 )}
               </div>
 
-              {patient.tags.length > 0 && (
-                <div className="flex gap-1.5 mt-3 flex-wrap">
-                  {patient.tags.map((tid) => {
-                    const tag = tags.find((t) => t.id === tid);
-                    return tag ? (
-                      <span key={tid} className="text-xs bg-accent/15 text-accent rounded-full px-2.5 py-0.5">{tag.name}</span>
-                    ) : null;
-                  })}
-                </div>
-              )}
-
               {patient.isMinor && (
                 <div className="mt-4 border border-border rounded-lg p-3 bg-muted/30">
                   <p className="text-xs font-medium text-foreground inline-flex items-center gap-1.5 mb-1.5">
                     <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Responsável legal
                   </p>
                   <div className="grid sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {patient.guardianName && <span>{patient.guardianName}</span>}
-                    {patient.guardianEmail && <span>{patient.guardianEmail}</span>}
-                    {patient.guardianPhone && <span>{patient.guardianPhone}</span>}
+                    {patient.guardianName && <span className="inline-flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{patient.guardianName}</span>}
+                    {patient.guardianEmail && <span className="inline-flex items-center gap-1.5"><Mail className="h-3 w-3" />{patient.guardianEmail}</span>}
+                    {patient.guardianPhone && <span className="inline-flex items-center gap-1.5"><Phone className="h-3 w-3" />{patient.guardianPhone}</span>}
                   </div>
                 </div>
               )}
@@ -238,7 +235,7 @@ function PatientDetail() {
               )}
             </div>
 
-            <Button className="rounded-lg shrink-0">
+            <Button onClick={() => setOpenSchedule(true)} className="rounded-lg shrink-0">
               <Plus className="h-4 w-4" /> Nova sessão
             </Button>
           </div>
@@ -276,7 +273,7 @@ function PatientDetail() {
               ) : (
                 <div className="text-center py-8 text-sm text-muted-foreground">
                   <p>Nenhuma sessão agendada.</p>
-                  <Button variant="outline" size="sm" className="mt-3 rounded-lg">
+                  <Button variant="outline" size="sm" className="mt-3 rounded-lg" onClick={() => setOpenSchedule(true)}>
                     <Plus className="h-4 w-4" /> Agendar sessão
                   </Button>
                 </div>
@@ -292,9 +289,14 @@ function PatientDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     {sessionTemplates.map((t) => (
-                      <SelectItem key={t.id} value={t.id} className="focus:bg-muted/60">
+                      <SelectItem
+                        key={t.id}
+                        value={t.id}
+                        textValue={t.name}
+                        className="focus:bg-muted/60 focus:text-foreground"
+                      >
                         <div className="flex flex-col">
-                          <span className="text-sm">{t.name}</span>
+                          <span className="text-sm text-foreground">{t.name}</span>
                           <span className="text-xs text-muted-foreground">{t.approach}</span>
                         </div>
                       </SelectItem>
@@ -390,7 +392,81 @@ function PatientDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ScheduleSessionDialog
+        open={openSchedule}
+        onOpenChange={setOpenSchedule}
+        onCreate={(s) => {
+          setAllSessions((prev) => [...prev, { ...s, patient_id: id }]);
+          toast.success("Sessão agendada");
+        }}
+      />
     </AppShell>
+  );
+}
+
+function ScheduleSessionDialog({
+  open, onOpenChange, onCreate,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreate: (s: Omit<Session, "patient_id">) => void;
+}) {
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("09:00");
+  const [duration, setDuration] = useState(50);
+  const [value, setValue] = useState(220);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!date) { toast.error("Selecione uma data"); return; }
+    const iso = new Date(`${date}T${time}:00`).toISOString();
+    onCreate({
+      id: `s${Date.now()}`,
+      date_time: iso,
+      duration_minutes: duration,
+      status: "scheduled",
+      payment_status: "pending",
+      value,
+      notes: "",
+    });
+    setDate(""); setTime("09:00"); setDuration(50); setValue(220);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Agendar nova sessão</DialogTitle>
+          <DialogDescription>Defina data, horário e valor da sessão.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="date">Data</Label>
+              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="time">Horário</Label>
+              <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="dur">Duração (min)</Label>
+              <Input id="dur" type="number" min={10} max={240} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="val">Valor (R$)</Label>
+              <Input id="val" type="number" min={0} value={value} onChange={(e) => setValue(Number(e.target.value))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit" className="rounded-lg">Agendar</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
