@@ -455,12 +455,6 @@ function EditPatientDialog({
   const [form, setForm] = useState(patient);
   const upd = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  // reset form when reopening with a possibly different patient
-  const lastIdRef = useState(patient.id)[0];
-  if (open && form.id !== patient.id && lastIdRef !== patient.id) {
-    setForm(patient);
-  }
-
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error("Nome é obrigatório"); return; }
