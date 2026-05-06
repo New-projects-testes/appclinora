@@ -64,14 +64,6 @@ function Financas() {
           eyebrow="Finanças"
           title="Como anda o seu mês."
           description="Acompanhe o que entrou e o que está por receber, sem complicação."
-          actions={
-            <input
-              type="month"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="bg-card border border-border rounded-lg px-3 py-2 text-sm"
-            />
-          }
         />
 
         <div className="grid md:grid-cols-4 gap-4 mb-6">
@@ -79,6 +71,43 @@ function Financas() {
           <Card label="Valor total" value={`R$ ${total.toLocaleString("pt-BR")}`} />
           <Card label="Recebido" value={`R$ ${paid.toLocaleString("pt-BR")}`} accent="success" />
           <Card label="Pendente" value={`R$ ${pending.toLocaleString("pt-BR")}`} accent="warning" />
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-3 mb-5">
+          <div className="relative flex-1">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar por nome..."
+              className="w-full bg-card border border-border rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+            <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {(Object.keys(PAYMENT_META) as PaymentStatus[]).map((s) => (
+                <SelectItem
+                  key={s}
+                  value={s}
+                  textValue={PAYMENT_META[s].label}
+                  className="focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-primary/8"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-sm text-foreground">{PAYMENT_META[s].label}</span>
+                    <span className="text-xs text-muted-foreground">{PAYMENT_META[s].description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input
+            type="month"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="bg-card border border-border rounded-lg px-3 py-2 text-sm w-full md:w-[180px]"
+          />
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
