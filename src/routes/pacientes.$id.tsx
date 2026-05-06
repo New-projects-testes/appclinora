@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { patients, sessions as initialSessions, tags, sessionTemplates } from "@/lib/mock-data";
+import { patients, sessions as initialSessions, sessionTemplates } from "@/lib/mock-data";
 import type { PatientStatus, Session } from "@/lib/types";
 import { useMemo, useState } from "react";
 import {
   Phone, Mail, Calendar, User as UserIcon, FileText, ChevronDown,
-  Save, Plus, Clock, CircleDollarSign, ShieldCheck,
+  Save, Plus, Clock, CircleDollarSign, ShieldCheck, MessageSquare,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -18,6 +18,11 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { PatientAvatar } from "@/components/PatientAvatar";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -25,11 +30,11 @@ import { toast } from "sonner";
 import type { Editor } from "@tiptap/react";
 import { cn } from "@/lib/utils";
 
-const STATUS_LABEL: Record<PatientStatus, string> = {
-  ativo: "Ativo",
-  em_pausa: "Em pausa",
-  inativo: "Inativo",
-  encerrado: "Encerrado",
+const STATUS_META: Record<PatientStatus, { label: string; cls: string }> = {
+  ativo: { label: "Ativo", cls: "bg-success/15 text-success" },
+  em_pausa: { label: "Em pausa", cls: "bg-warning/20 text-warning-foreground" },
+  inativo: { label: "Inativo", cls: "bg-muted text-muted-foreground" },
+  encerrado: { label: "Encerrado", cls: "bg-secondary text-secondary-foreground" },
 };
 
 const GENDER_LABEL: Record<string, string> = {
