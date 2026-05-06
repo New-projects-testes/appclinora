@@ -489,12 +489,14 @@ function ScheduleSessionDialog({
   );
 }
 
-function InfoRow({ icon, value }: { icon: React.ReactNode; value: string }) {
+function InfoField({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 truncate">
-      <span className="text-muted-foreground/70">{icon}</span>
-      {value}
-    </span>
+    <div className="min-w-0">
+      <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground/70 inline-flex items-center gap-1.5 mb-1">
+        <span>{icon}</span>{label}
+      </p>
+      <p className="text-sm text-foreground truncate">{value}</p>
+    </div>
   );
 }
 
