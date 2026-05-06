@@ -26,16 +26,25 @@ function Financas() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [q, setQ] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | "all">("all");
   const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [period]);
+  useEffect(() => { setPage(1); }, [period, q, paymentFilter]);
 
   const filtered = useMemo(() => {
     const [y, m] = period.split("-").map(Number);
+    const term = q.trim().toLowerCase();
     return sessions.filter((s) => {
       const d = new Date(s.date_time);
-      return d.getFullYear() === y && d.getMonth() === m - 1;
+      if (d.getFullYear() !== y || d.getMonth() !== m - 1) return false;
+      if (paymentFilter !== "all" && s.payment_status !== paymentFilter) return false;
+      if (term) {
+        const p = patients.find((x) => x.id === s.patient_id);
+        if (!p?.name.toLowerCase().includes(term)) return false;
+      }
+      return true;
     });
-  }, [sessions, period]);
+  }, [sessions, period, q, paymentFilter]);
 
   const total = filtered.reduce((a, s) => a + s.value, 0);
   const paid = filtered.filter((s) => s.payment_status === "paid").reduce((a, s) => a + s.value, 0);
