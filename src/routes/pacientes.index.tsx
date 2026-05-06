@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { PatientAvatar } from "@/components/PatientAvatar";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/pacientes/")({
