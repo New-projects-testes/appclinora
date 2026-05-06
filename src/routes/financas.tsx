@@ -3,11 +3,16 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { PatientAvatar } from "@/components/PatientAvatar";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { sessions as initial, patients } from "@/lib/mock-data";
 import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Search, ArrowUp, ArrowDown, Calendar as CalendarIcon, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 const PAYMENT_META = {
   paid: { label: "Pago", description: "Sessão já recebida", className: "bg-success/15 text-success" },
@@ -17,32 +22,35 @@ const PAYMENT_META = {
 type PaymentStatus = keyof typeof PAYMENT_META;
 
 const PAGE_SIZE = 10;
-const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 export const Route = createFileRoute("/financas")({
   component: Financas,
 });
 
+function startOfMonth(d = new Date()) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+function endOfMonth(d = new Date()) { return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999); }
+
 function Financas() {
   const [sessions, setSessions] = useState(initial);
-  const now = new Date();
-  const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const [period, setPeriod] = useState<string>(currentPeriod); // "" = todos
+  const [range, setRange] = useState<DateRange | undefined>({ from: startOfMonth(), to: endOfMonth() });
   const [q, setQ] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | "all">("all");
   const [page, setPage] = useState(1);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  useEffect(() => { setPage(1); }, [period, q, paymentFilter]);
+  useEffect(() => { setPage(1); }, [range, q, paymentFilter]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    let [y, m] = [0, 0];
-    if (period) [y, m] = period.split("-").map(Number);
+    const from = range?.from ? new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate()).getTime() : null;
+    const to = range?.to
+      ? new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 23, 59, 59, 999).getTime()
+      : range?.from
+        ? new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate(), 23, 59, 59, 999).getTime()
+        : null;
     const list = sessions.filter((s) => {
-      if (period) {
-        const d = new Date(s.date_time);
-        if (d.getFullYear() !== y || d.getMonth() !== m - 1) return false;
-      }
+      const t = new Date(s.date_time).getTime();
+      if (from !== null && t < from) return false;
+      if (to !== null && t > to) return false;
       if (paymentFilter !== "all" && s.payment_status !== paymentFilter) return false;
       if (term) {
         const p = patients.find((x) => x.id === s.patient_id);
@@ -55,7 +63,7 @@ function Financas() {
       const db = new Date(b.date_time).getTime();
       return sortDir === "asc" ? da - db : db - da;
     });
-  }, [sessions, period, q, paymentFilter, sortDir]);
+  }, [sessions, range, q, paymentFilter, sortDir]);
 
   const total = filtered.reduce((a, s) => a + (s.payment_status === "isento" ? 0 : s.value), 0);
   const paid = filtered.filter((s) => s.payment_status === "paid").reduce((a, s) => a + s.value, 0);
@@ -68,25 +76,12 @@ function Financas() {
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const periodLabel = period
-    ? `${MONTHS[Number(period.split("-")[1]) - 1]} ${period.split("-")[0]}`
-    : "Todo o período";
-
-  // Date picker options: últimos 24 meses
-  const monthOptions = useMemo(() => {
-    const arr: { value: string; label: string }[] = [];
-    const d = new Date();
-    for (let i = 0; i < 24; i++) {
-      const y = d.getFullYear();
-      const m = d.getMonth();
-      arr.push({
-        value: `${y}-${String(m + 1).padStart(2, "0")}`,
-        label: `${MONTHS[m]} ${y}`,
-      });
-      d.setMonth(d.getMonth() - 1);
-    }
-    return arr;
-  }, []);
+  const rangeLabel = (() => {
+    if (!range?.from) return "Todo o período";
+    const fmt = (d: Date) => format(d, "dd MMM yyyy", { locale: ptBR });
+    if (!range.to || range.from.getTime() === range.to.getTime()) return fmt(range.from);
+    return `${fmt(range.from)} – ${fmt(range.to)}`;
+  })();
 
   return (
     <AppShell>
@@ -140,15 +135,15 @@ function Financas() {
 
           <Popover>
             <PopoverTrigger asChild>
-              <button className="flex items-center justify-between gap-2 bg-card border border-border rounded-lg px-3 py-2.5 text-sm w-full md:w-[200px] hover:bg-muted/40 transition-colors">
+              <button className="flex items-center justify-between gap-2 bg-card border border-border rounded-lg px-3 py-2.5 text-sm w-full md:w-[280px] hover:bg-muted/40 transition-colors">
                 <span className="flex items-center gap-2 min-w-0">
                   <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="truncate">{periodLabel}</span>
+                  <span className="truncate">{rangeLabel}</span>
                 </span>
-                {period && (
+                {range?.from && (
                   <span
                     role="button"
-                    onClick={(e) => { e.stopPropagation(); setPeriod(""); }}
+                    onClick={(e) => { e.stopPropagation(); setRange(undefined); }}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -156,23 +151,34 @@ function Financas() {
                 )}
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-[220px] p-1 max-h-[300px] overflow-y-auto">
-              <button
-                onClick={() => setPeriod("")}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted/60 ${period === "" ? "bg-primary/8 text-primary font-medium" : ""}`}
-              >
-                Todo o período
-              </button>
-              <div className="h-px bg-border my-1" />
-              {monthOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setPeriod(opt.value)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted/60 ${period === opt.value ? "bg-primary/8 text-primary font-medium" : ""}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <PopoverContent align="end" className="w-auto p-0">
+              <div className="flex flex-col sm:flex-row">
+                <div className="flex flex-col gap-1 p-3 border-b sm:border-b-0 sm:border-r border-border min-w-[160px]">
+                  <PresetButton label="Este mês" onClick={() => setRange({ from: startOfMonth(), to: endOfMonth() })} />
+                  <PresetButton label="Mês passado" onClick={() => {
+                    const d = new Date(); d.setMonth(d.getMonth() - 1);
+                    setRange({ from: startOfMonth(d), to: endOfMonth(d) });
+                  }} />
+                  <PresetButton label="Últimos 30 dias" onClick={() => {
+                    const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 29);
+                    setRange({ from, to });
+                  }} />
+                  <PresetButton label="Este ano" onClick={() => {
+                    const y = new Date().getFullYear();
+                    setRange({ from: new Date(y, 0, 1), to: new Date(y, 11, 31, 23, 59, 59) });
+                  }} />
+                  <PresetButton label="Todo o período" onClick={() => setRange(undefined)} />
+                </div>
+                <Calendar
+                  mode="range"
+                  selected={range}
+                  onSelect={setRange}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </div>
             </PopoverContent>
           </Popover>
         </div>
@@ -255,6 +261,17 @@ function Financas() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function PresetButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-left text-sm px-3 py-2 rounded-md hover:bg-muted/60 transition-colors"
+    >
+      {label}
+    </button>
   );
 }
 
