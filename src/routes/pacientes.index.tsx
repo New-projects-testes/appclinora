@@ -1,23 +1,100 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
-import { patients, tags } from "@/lib/mock-data";
-import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { patients as initialPatients } from "@/lib/mock-data";
+import type { Patient, PatientStatus } from "@/lib/types";
+import { useMemo, useState } from "react";
+import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/pacientes/")({
   component: Pacientes,
 });
 
-function Pacientes() {
-  const [q, setQ] = useState("");
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+const STATUS_META: Record<PatientStatus, { label: string; description: string; className: string }> = {
+  ativo: { label: "Ativo", description: "Em acompanhamento regular", className: "bg-success/15 text-success" },
+  em_pausa: { label: "Em pausa", description: "Interrompeu temporariamente", className: "bg-warning/20 text-warning-foreground" },
+  inativo: { label: "Inativo", description: "Não retorna há um tempo", className: "bg-muted text-muted-foreground" },
+  encerrado: { label: "Encerrado", description: "Processo finalizado", className: "bg-secondary text-secondary-foreground" },
+};
 
-  const filtered = patients.filter((p) => {
-    if (activeTag && !p.tags.includes(activeTag)) return false;
-    if (q && !p.name.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  });
+const PAGE_SIZE = 10;
+
+type SortKey = "name" | "lastSession";
+type SortDir = "asc" | "desc";
+
+function Pacientes() {
+  const navigate = useNavigate();
+  const [list, setList] = useState<Patient[]>(initialPatients);
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">("all");
+  const [lastSessionFilter, setLastSessionFilter] = useState<"all" | "7" | "30" | "90" | "older">("all");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
+  const [openNew, setOpenNew] = useState(false);
+
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    const days = (n: number) => n * 24 * 60 * 60 * 1000;
+    return list.filter((p) => {
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (q && !p.name.toLowerCase().includes(q.toLowerCase())) return false;
+      if (lastSessionFilter !== "all") {
+        if (!p.lastSession) return lastSessionFilter === "older";
+        const diff = now - new Date(p.lastSession).getTime();
+        if (lastSessionFilter === "7" && diff > days(7)) return false;
+        if (lastSessionFilter === "30" && diff > days(30)) return false;
+        if (lastSessionFilter === "90" && diff > days(90)) return false;
+        if (lastSessionFilter === "older" && diff <= days(90)) return false;
+      }
+      return true;
+    });
+  }, [list, q, statusFilter, lastSessionFilter]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") cmp = a.name.localeCompare(b.name, "pt-BR");
+      else {
+        const av = a.lastSession ? new Date(a.lastSession).getTime() : 0;
+        const bv = b.lastSession ? new Date(b.lastSession).getTime() : 0;
+        cmp = av - bv;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir(key === "name" ? "asc" : "desc"); }
+  };
+
+  const SortIcon = ({ k }: { k: SortKey }) => {
+    if (sortKey !== k) return <ArrowUpDown className="h-3 w-3 opacity-50" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
+
+  const updateStatus = (id: string, status: PatientStatus) => {
+    setList((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+  };
 
   return (
     <AppShell>
@@ -26,9 +103,9 @@ function Pacientes() {
           eyebrow="Pacientes"
           title="Quem está sob seus cuidados."
           actions={
-            <button className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-full px-4 py-2 text-sm hover:bg-primary/90">
+            <Button onClick={() => setOpenNew(true)} className="rounded-lg">
               <Plus className="h-4 w-4" /> Novo paciente
-            </button>
+            </Button>
           }
         />
 
@@ -37,74 +114,252 @@ function Pacientes() {
             <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => { setQ(e.target.value); setPage(1); }}
               placeholder="Buscar por nome..."
               className="w-full bg-card border border-border rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setActiveTag(null)}
-              className={`px-3 py-1.5 rounded-full text-xs ${!activeTag ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-            >
-              Todas
-            </button>
-            {tags.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setActiveTag(t.id === activeTag ? null : t.id)}
-                className={`px-3 py-1.5 rounded-full text-xs ${activeTag === t.id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:bg-secondary/70"}`}
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as any); setPage(1); }}>
+            <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
+                <SelectItem key={s} value={s}>{STATUS_META[s].label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={lastSessionFilter} onValueChange={(v) => { setLastSessionFilter(v as any); setPage(1); }}>
+            <SelectTrigger className="w-full md:w-[200px]"><SelectValue placeholder="Última sessão" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Qualquer data</SelectItem>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+              <SelectItem value="older">Mais de 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="text-left p-4 font-medium">Paciente</th>
-                <th className="text-left p-4 font-medium">Telefone</th>
-                <th className="text-left p-4 font-medium">Tags</th>
-                <th className="text-left p-4 font-medium">Última sessão</th>
+                <th className="text-left p-4 font-medium">
+                  <button onClick={() => toggleSort("name")} className="inline-flex items-center gap-1.5 hover:text-foreground">
+                    Paciente <SortIcon k="name" />
+                  </button>
+                </th>
+                <th className="text-left p-4 font-medium">WhatsApp</th>
+                <th className="text-left p-4 font-medium">Status</th>
+                <th className="text-left p-4 font-medium">
+                  <button onClick={() => toggleSort("lastSession")} className="inline-flex items-center gap-1.5 hover:text-foreground">
+                    Última sessão <SortIcon k="lastSession" />
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition">
-                  <td className="p-4">
-                    <Link to="/pacientes/$id" params={{ id: p.id }} className="flex items-center gap-3">
+              {paginated.map((p) => (
+                <tr key={p.id} className="border-b border-border last:border-0">
+                  <td
+                    className="p-0 cursor-pointer group"
+                    onClick={() => navigate({ to: "/pacientes/$id", params: { id: p.id } })}
+                  >
+                    <div className="flex items-center gap-3 p-4 transition-colors group-hover:bg-primary/5">
                       <img src={p.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
-                      <span className="font-medium">{p.name}</span>
-                    </Link>
+                      <div className="min-w-0">
+                        <p className="font-medium group-hover:text-primary transition-colors truncate">{p.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{p.email}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="p-4 text-sm text-muted-foreground">{p.phone}</td>
                   <td className="p-4">
-                    <div className="flex gap-1.5 flex-wrap">
-                      {p.tags.map((id) => {
-                        const tag = tags.find((t) => t.id === id);
-                        return tag ? (
-                          <span key={id} className="text-[11px] bg-accent/20 text-accent-foreground rounded-full px-2 py-0.5">
-                            {tag.name}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
+                    <Select value={p.status} onValueChange={(v) => updateStatus(p.id, v as PatientStatus)}>
+                      <SelectTrigger className={`h-8 w-[140px] border-0 text-xs font-medium ${STATUS_META[p.status].className}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
+                          <SelectItem key={s} value={s}>
+                            <div className="flex flex-col">
+                              <span className="text-sm">{STATUS_META[s].label}</span>
+                              <span className="text-xs text-muted-foreground">{STATUS_META[s].description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </td>
                   <td className="p-4 text-sm text-muted-foreground">
                     {p.lastSession ? new Date(p.lastSession).toLocaleDateString("pt-BR") : "—"}
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr><td colSpan={4} className="p-12 text-center text-muted-foreground">Nenhum paciente encontrado.</td></tr>
               )}
             </tbody>
           </table>
+
+          {sorted.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm text-muted-foreground">
+              <span>
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sorted.length)} de {sorted.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span>Página {currentPage} de {totalPages}</span>
+                <Button variant="outline" size="sm" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      <NewPatientDialog
+        open={openNew}
+        onOpenChange={setOpenNew}
+        onCreate={(p) => { setList([p, ...list]); setPage(1); toast.success("Paciente criado com sucesso"); }}
+      />
     </AppShell>
+  );
+}
+
+function NewPatientDialog({
+  open, onOpenChange, onCreate,
+}: { open: boolean; onOpenChange: (v: boolean) => void; onCreate: (p: Patient) => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [gender, setGender] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isMinor, setIsMinor] = useState(false);
+  const [gName, setGName] = useState("");
+  const [gEmail, setGEmail] = useState("");
+  const [gPhone, setGPhone] = useState("");
+
+  const reset = () => {
+    setName(""); setEmail(""); setPhone(""); setBirthDate(""); setGender(""); setNotes("");
+    setIsMinor(false); setGName(""); setGEmail(""); setGPhone("");
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !phone.trim()) {
+      toast.error("Preencha os campos obrigatórios");
+      return;
+    }
+    if (isMinor && (!gName.trim() || !gEmail.trim() || !gPhone.trim())) {
+      toast.error("Preencha os dados do responsável");
+      return;
+    }
+    const p: Patient = {
+      id: `p${Date.now()}`,
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      birthDate: birthDate || undefined,
+      gender: gender || undefined,
+      notes: notes.trim() || undefined,
+      isMinor,
+      guardianName: isMinor ? gName.trim() : undefined,
+      guardianEmail: isMinor ? gEmail.trim() : undefined,
+      guardianPhone: isMinor ? gPhone.trim() : undefined,
+      status: "ativo",
+      tags: [],
+      avatar: `https://i.pravatar.cc/100?u=${encodeURIComponent(email || name)}`,
+    };
+    onCreate(p);
+    reset();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Novo paciente</DialogTitle>
+          <DialogDescription>Preencha os dados para criar um novo prontuário.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="Nome completo" required>
+              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
+            </Field>
+            <Field label="E-mail" required>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required />
+            </Field>
+            <Field label="WhatsApp" required>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" maxLength={20} required />
+            </Field>
+            <Field label="Data de nascimento">
+              <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+            </Field>
+            <Field label="Gênero">
+              <Select value={gender} onValueChange={setGender}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mulher_cis">Mulher cis</SelectItem>
+                  <SelectItem value="homem_cis">Homem cis</SelectItem>
+                  <SelectItem value="mulher_trans">Mulher trans</SelectItem>
+                  <SelectItem value="homem_trans">Homem trans</SelectItem>
+                  <SelectItem value="nao_binario">Não-binário</SelectItem>
+                  <SelectItem value="genero_fluido">Gênero fluido</SelectItem>
+                  <SelectItem value="agenero">Agênero</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                  <SelectItem value="prefiro_nao_dizer">Prefiro não dizer</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+
+          <Field label="Observações">
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} maxLength={1000} />
+          </Field>
+
+          <div className="flex items-center gap-2 pt-2">
+            <Checkbox id="minor" checked={isMinor} onCheckedChange={(v) => setIsMinor(!!v)} />
+            <Label htmlFor="minor" className="cursor-pointer">Paciente menor de idade</Label>
+          </div>
+
+          {isMinor && (
+            <div className="border border-border rounded-lg p-4 space-y-4 bg-muted/30">
+              <p className="text-sm font-medium">Dados do responsável</p>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Field label="Nome completo" required>
+                  <Input value={gName} onChange={(e) => setGName(e.target.value)} maxLength={120} required />
+                </Field>
+                <Field label="E-mail" required>
+                  <Input type="email" value={gEmail} onChange={(e) => setGEmail(e.target.value)} maxLength={255} required />
+                </Field>
+                <Field label="WhatsApp" required>
+                  <Input value={gPhone} onChange={(e) => setGPhone(e.target.value)} maxLength={20} required />
+                </Field>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit">Criar paciente</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm">{label}{required && <span className="text-destructive ml-0.5">*</span>}</Label>
+      {children}
+    </div>
   );
 }
