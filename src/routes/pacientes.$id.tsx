@@ -429,7 +429,131 @@ function PatientDetail() {
           toast.success("Sessão agendada");
         }}
       />
+
+      <EditPatientDialog
+        open={openEdit}
+        onOpenChange={setOpenEdit}
+        patient={patient}
+        onSave={(updated) => {
+          setPatient(updated);
+          setStatus(updated.status);
+          toast.success("Dados do paciente atualizados");
+        }}
+      />
     </AppShell>
+  );
+}
+
+function EditPatientDialog({
+  open, onOpenChange, patient, onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  patient: NonNullable<ReturnType<typeof patients.find>>;
+  onSave: (p: NonNullable<ReturnType<typeof patients.find>>) => void;
+}) {
+  const [form, setForm] = useState(patient);
+  const upd = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  // reset form when reopening with a possibly different patient
+  const lastIdRef = useState(patient.id)[0];
+  if (open && form.id !== patient.id && lastIdRef !== patient.id) {
+    setForm(patient);
+  }
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) { toast.error("Nome é obrigatório"); return; }
+    onSave(form);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) setForm(patient); onOpenChange(v); }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Editar paciente</DialogTitle>
+          <DialogDescription>Atualize os dados cadastrais do paciente.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="ep-name">Nome completo</Label>
+              <Input id="ep-name" value={form.name} onChange={(e) => upd("name", e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-email">E-mail</Label>
+              <Input id="ep-email" type="email" value={form.email} onChange={(e) => upd("email", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-phone">WhatsApp</Label>
+              <Input id="ep-phone" value={form.phone} onChange={(e) => upd("phone", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-birth">Nascimento</Label>
+              <Input id="ep-birth" type="date" value={form.birthDate ?? ""} onChange={(e) => upd("birthDate", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-gender">Gênero</Label>
+              <Select value={form.gender ?? ""} onValueChange={(v) => upd("gender", v)}>
+                <SelectTrigger id="ep-gender"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(GENDER_LABEL).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-status">Status</Label>
+              <Select value={form.status} onValueChange={(v) => upd("status", v as PatientStatus)}>
+                <SelectTrigger id="ep-status"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
+                    <SelectItem key={s} value={s}>{STATUS_META[s].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ep-avatar">URL do avatar</Label>
+              <Input id="ep-avatar" value={form.avatar ?? ""} onChange={(e) => upd("avatar", e.target.value)} placeholder="https://..." />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="ep-notes">Observações</Label>
+              <Textarea id="ep-notes" rows={3} value={form.notes ?? ""} onChange={(e) => upd("notes", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <Checkbox id="ep-minor" checked={!!form.isMinor} onCheckedChange={(v) => upd("isMinor", !!v)} />
+            <Label htmlFor="ep-minor" className="cursor-pointer">Paciente menor de idade</Label>
+          </div>
+
+          {form.isMinor && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border border-border rounded-xl p-4 bg-muted/30">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="ep-gname">Nome do responsável</Label>
+                <Input id="ep-gname" value={form.guardianName ?? ""} onChange={(e) => upd("guardianName", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ep-gemail">E-mail do responsável</Label>
+                <Input id="ep-gemail" type="email" value={form.guardianEmail ?? ""} onChange={(e) => upd("guardianEmail", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ep-gphone">WhatsApp do responsável</Label>
+                <Input id="ep-gphone" value={form.guardianPhone ?? ""} onChange={(e) => upd("guardianPhone", e.target.value)} />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit" className="rounded-lg">Salvar alterações</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
