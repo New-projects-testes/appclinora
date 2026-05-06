@@ -30,12 +30,12 @@ export const tags: Tag[] = [
 ];
 
 export const patients: Patient[] = [
-  { id: "p1", name: "Rafael Monteiro", phone: "(11) 98123-4521", tags: ["t1", "t3"], lastSession: "2026-04-28", avatar: "https://i.pravatar.cc/100?img=12" },
-  { id: "p2", name: "Helena Castro", phone: "(11) 99234-1133", tags: ["t2"], lastSession: "2026-05-01", avatar: "https://i.pravatar.cc/100?img=32" },
-  { id: "p3", name: "João Pedro Lima", phone: "(11) 98777-6655", tags: ["t4", "t5"], lastSession: "2026-04-22", avatar: "https://i.pravatar.cc/100?img=15" },
-  { id: "p4", name: "Beatriz Souza", phone: "(11) 91234-9988", tags: ["t1"], lastSession: "2026-05-03", avatar: "https://i.pravatar.cc/100?img=49" },
-  { id: "p5", name: "Camila Ferreira", phone: "(11) 99888-1010", tags: ["t6"], lastSession: "2026-04-30", avatar: "https://i.pravatar.cc/100?img=24" },
-  { id: "p6", name: "Eduardo Reis", phone: "(11) 98321-4400", tags: ["t3", "t1"], lastSession: "2026-04-18", avatar: "https://i.pravatar.cc/100?img=68" },
+  { id: "p1", name: "Rafael Monteiro", email: "rafael.monteiro@email.com", phone: "(11) 98123-4521", status: "ativo", tags: ["t1", "t3"], lastSession: "2026-04-28", avatar: "https://i.pravatar.cc/100?img=12" },
+  { id: "p2", name: "Helena Castro", email: "helena.castro@email.com", phone: "(11) 99234-1133", status: "ativo", tags: ["t2"], lastSession: "2026-05-01", avatar: "https://i.pravatar.cc/100?img=32" },
+  { id: "p3", name: "João Pedro Lima", email: "joaopedro.lima@email.com", phone: "(11) 98777-6655", status: "em_pausa", tags: ["t4", "t5"], lastSession: "2026-04-22", avatar: "https://i.pravatar.cc/100?img=15" },
+  { id: "p4", name: "Beatriz Souza", email: "beatriz.souza@email.com", phone: "(11) 91234-9988", status: "ativo", tags: ["t1"], lastSession: "2026-05-03", avatar: "https://i.pravatar.cc/100?img=49" },
+  { id: "p5", name: "Camila Ferreira", email: "camila.ferreira@email.com", phone: "(11) 99888-1010", status: "inativo", tags: ["t6"], lastSession: "2026-04-30", avatar: "https://i.pravatar.cc/100?img=24" },
+  { id: "p6", name: "Eduardo Reis", email: "eduardo.reis@email.com", phone: "(11) 98321-4400", status: "encerrado", tags: ["t3", "t1"], lastSession: "2026-04-18", avatar: "https://i.pravatar.cc/100?img=68" },
 ];
 
 const today = new Date();
