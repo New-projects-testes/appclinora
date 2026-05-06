@@ -74,6 +74,21 @@ export const sessions: Session[] = [
   { id: "s12", patient_id: "p4", date_time: t(14, 30, -14), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "<p>Sessão focada em <em>reestruturação cognitiva</em>. Identificamos três distorções principais.</p>" },
   { id: "s13", patient_id: "p4", date_time: t(14, 30, -21), duration_minutes: 50, status: "done", payment_status: "isento", value: 220, notes: "<p>Sessão de acolhimento. Paciente em momento delicado, sessão isenta.</p>" },
   { id: "s14", patient_id: "p4", date_time: t(14, 30, -28), duration_minutes: 50, status: "done", payment_status: "pending", value: 220, notes: "<h3>Anamnese</h3><p>Primeira consulta. Queixa principal: ansiedade no trabalho.</p>" },
+  { id: "s15", patient_id: "p5", date_time: t(10, 0, -2), duration_minutes: 50, status: "done", payment_status: "paid", value: 240, notes: "" },
+  { id: "s16", patient_id: "p6", date_time: t(15, 0, -3), duration_minutes: 50, status: "done", payment_status: "pending", value: 200, notes: "" },
+  { id: "s17", patient_id: "p2", date_time: t(11, 0, -4), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "" },
+  { id: "s18", patient_id: "p3", date_time: t(16, 0, -5), duration_minutes: 50, status: "done", payment_status: "pending", value: 220, notes: "" },
+  { id: "s19", patient_id: "p1", date_time: t(9, 0, -6), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "" },
+  { id: "s20", patient_id: "p4", date_time: t(14, 30, -8), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "" },
+  { id: "s21", patient_id: "p5", date_time: t(10, 0, -9), duration_minutes: 50, status: "done", payment_status: "pending", value: 240, notes: "" },
+  { id: "s22", patient_id: "p6", date_time: t(15, 0, -10), duration_minutes: 50, status: "done", payment_status: "paid", value: 200, notes: "" },
+  { id: "s23", patient_id: "p2", date_time: t(11, 0, -11), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "" },
+  { id: "s24", patient_id: "p3", date_time: t(16, 0, -12), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "" },
+  { id: "s25", patient_id: "p1", date_time: t(9, 0, -13), duration_minutes: 50, status: "done", payment_status: "pending", value: 220, notes: "" },
+  { id: "s26", patient_id: "p4", date_time: t(14, 30, -15), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "" },
+  { id: "s27", patient_id: "p5", date_time: t(10, 0, -16), duration_minutes: 50, status: "done", payment_status: "paid", value: 240, notes: "" },
+  { id: "s28", patient_id: "p6", date_time: t(15, 0, -17), duration_minutes: 50, status: "done", payment_status: "pending", value: 200, notes: "" },
+  { id: "s29", patient_id: "p2", date_time: t(11, 0, -18), duration_minutes: 50, status: "done", payment_status: "paid", value: 220, notes: "" },
 ];
 
 export const tasks: Task[] = [
