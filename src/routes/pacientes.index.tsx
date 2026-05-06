@@ -167,7 +167,7 @@ function Pacientes() {
                     onClick={() => navigate({ to: "/pacientes/$id", params: { id: p.id } })}
                   >
                     <div className="flex items-center gap-3 p-4 transition-colors group-hover:bg-primary/5">
-                      <img src={p.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
+                      <PatientAvatar name={p.name} src={p.avatar} size={36} />
                       <div className="min-w-0">
                         <p className="font-medium group-hover:text-primary transition-colors truncate">{p.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{p.email}</p>
@@ -182,9 +182,14 @@ function Pacientes() {
                       </SelectTrigger>
                       <SelectContent>
                         {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
-                          <SelectItem key={s} value={s} textValue={STATUS_META[s].label}>
+                          <SelectItem
+                            key={s}
+                            value={s}
+                            textValue={STATUS_META[s].label}
+                            className="focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-primary/8"
+                          >
                             <div className="flex flex-col">
-                              <span className="text-sm">{STATUS_META[s].label}</span>
+                              <span className="text-sm text-foreground">{STATUS_META[s].label}</span>
                               <span className="text-xs text-muted-foreground">{STATUS_META[s].description}</span>
                             </div>
                           </SelectItem>
