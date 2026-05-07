@@ -19,7 +19,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <header className="px-6 md:px-10 py-6 flex items-center justify-between max-w-7xl mx-auto">
-        <Link to="/" className="flex items-baseline gap-1.5">
+        <Link to="/" className="flex items-baseline">
           <span className="font-display text-2xl tracking-tight">Clinora</span>
           <span className="h-1.5 w-1.5 rounded-full bg-accent" />
         </Link>

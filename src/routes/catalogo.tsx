@@ -61,7 +61,7 @@ function Catalogo() {
       {/* HEADER */}
       <header className="bg-primary text-primary-foreground sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-baseline gap-1.5">
+          <Link to="/" className="flex items-baseline">
             <span className="font-display text-2xl">Clinora</span>
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           </Link>
