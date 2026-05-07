@@ -4,6 +4,11 @@ import type { Professional } from "@/lib/types";
 import { useMemo, useState } from "react";
 import { Search, MapPin, Globe2, Building2, X, Mail, Phone, BadgeCheck, ArrowRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+
+const PRICE_MIN = 150;
+const PRICE_MAX = 350;
+const LINKEDIN_BLUE = "#0A66C2";
 
 export const Route = createFileRoute("/catalogo")({
   head: () => ({
