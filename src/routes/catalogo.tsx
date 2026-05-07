@@ -237,7 +237,7 @@ function ProfileModal({ pro, onClose }: { pro: Professional; onClose: () => void
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="font-display text-2xl">{pro.name}</h2>
-              <BadgeCheck className="h-5 w-5 text-primary" aria-label="Profissional verificado" />
+              <BadgeCheck className="h-5 w-5 shrink-0" style={{ color: "white", fill: LINKEDIN_BLUE }} aria-label="Profissional verificado" />
             </div>
             <p className="text-primary">{pro.specialty}</p>
             <p className="text-xs text-muted-foreground mt-1">{pro.registration_type} {pro.registration_number}</p>
