@@ -4,6 +4,11 @@ import type { Professional } from "@/lib/types";
 import { useMemo, useState } from "react";
 import { Search, MapPin, Globe2, Building2, X, Mail, Phone, BadgeCheck, ArrowRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+
+const PRICE_MIN = 150;
+const PRICE_MAX = 350;
+const LINKEDIN_BLUE = "#0A66C2";
 
 export const Route = createFileRoute("/catalogo")({
   head: () => ({
@@ -28,15 +33,18 @@ function Catalogo() {
   const [location, setLocation] = useState("");
   const [online, setOnline] = useState(false);
   const [presential, setPresential] = useState(false);
+  const [priceRange, setPriceRange] = useState<[number, number]>([PRICE_MIN, PRICE_MAX]);
   const [open, setOpen] = useState<Professional | null>(null);
 
   const specialties = ["Todas", ...Array.from(new Set(catalog.map((p) => p.specialty)))];
 
-  const visible = catalog.filter((p) => p.catalog_visible && p.verification_status);
+  const visible = useMemo(() => catalog.filter((p) => p.catalog_visible && p.verification_status), []);
   const filtered = useMemo(() => visible.filter((p) => {
     if (specialty !== "Todas" && p.specialty !== specialty) return false;
     if (online && !p.accepts_online) return false;
     if (presential && !p.accepts_presential) return false;
+    const price = priceFor(p.id);
+    if (price < priceRange[0] || price > priceRange[1]) return false;
     if (location) {
       const l = location.toLowerCase();
       if (!p.city.toLowerCase().includes(l) && !p.state.toLowerCase().includes(l)) return false;
@@ -46,7 +54,7 @@ function Catalogo() {
       return p.name.toLowerCase().includes(s) || p.specialty.toLowerCase().includes(s) || p.city.toLowerCase().includes(s);
     }
     return true;
-  }), [visible, specialty, online, presential, location, q]);
+  }), [visible, specialty, online, presential, location, q, priceRange]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,15 +66,15 @@ function Catalogo() {
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           </Link>
           <div className="flex items-center gap-5">
+            <Link to="/login" className="text-sm font-medium hover:underline underline-offset-4">
+              Entrar
+            </Link>
             <Link
               to="/cadastro"
               className="hidden sm:inline-flex items-center gap-2 bg-accent text-accent-foreground font-medium rounded-lg px-4 py-2.5 text-sm hover:opacity-90 transition"
             >
               Quero ser encontrado(a) no catálogo
               <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link to="/login" className="text-sm font-medium hover:underline underline-offset-4">
-              Entrar
             </Link>
           </div>
         </div>
@@ -141,12 +149,30 @@ function Catalogo() {
               <Switch checked={presential} onCheckedChange={setPresential} />
             </div>
           </div>
+
+          <div className="pt-4 border-t border-border">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Faixa de preço</label>
+            </div>
+            <Slider
+              min={PRICE_MIN}
+              max={PRICE_MAX}
+              step={10}
+              value={priceRange}
+              onValueChange={(v) => setPriceRange([v[0], v[1]] as [number, number])}
+              className="mt-2"
+            />
+            <div className="flex items-center justify-between mt-3 text-sm">
+              <span className="text-muted-foreground">R$ {priceRange[0]}</span>
+              <span className="text-muted-foreground">R$ {priceRange[1]}</span>
+            </div>
+          </div>
         </aside>
 
         {/* Cards */}
         <div>
           <p className="text-sm text-muted-foreground mb-4">{filtered.length} profissionais encontrados</p>
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
             {filtered.map((p) => {
               const price = priceFor(p.id);
               return (
@@ -160,7 +186,7 @@ function Catalogo() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <h3 className="font-display text-lg leading-tight">{p.name}</h3>
-                        <BadgeCheck className="h-4 w-4 text-primary" aria-label="Profissional verificado" />
+                        <BadgeCheck className="h-4 w-4 shrink-0" style={{ color: "white", fill: LINKEDIN_BLUE }} aria-label="Profissional verificado" />
                       </div>
                       <p className="text-sm text-primary mt-0.5">{p.specialty}</p>
                     </div>
@@ -211,7 +237,7 @@ function ProfileModal({ pro, onClose }: { pro: Professional; onClose: () => void
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="font-display text-2xl">{pro.name}</h2>
-              <BadgeCheck className="h-5 w-5 text-primary" aria-label="Profissional verificado" />
+              <BadgeCheck className="h-5 w-5 shrink-0" style={{ color: "white", fill: LINKEDIN_BLUE }} aria-label="Profissional verificado" />
             </div>
             <p className="text-primary">{pro.specialty}</p>
             <p className="text-xs text-muted-foreground mt-1">{pro.registration_type} {pro.registration_number}</p>
