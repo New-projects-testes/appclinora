@@ -1,65 +1,59 @@
-## Plano: Fluxo público de agendamento de consulta
+## Refazer página `/pacientes/$id`
 
-Adicionar fluxo de marcação a partir do `/catalogo`, **mantendo nosso design system** (azul Ocean Deep, fontes Plus Jakarta + Inter, cards brancos com bordas sutis, botões `rounded-lg`). As referências do Doctoralia são apenas para a estrutura de fluxo / passos.
+Vou reconstruir totalmente `src/routes/pacientes.$id.tsx` mantendo a UI/paleta atual do app (cards brancos, Ocean Deep, Plus Jakarta + Inter), inspirada na imagem mas sem copiar o visual.
 
-### Fluxo (4 etapas)
+### 1. Breadcrumb
+Substituir o link "← Pacientes" por um breadcrumb usando o componente `@/components/ui/breadcrumb`:
+`Pacientes / {Nome do paciente}`
 
-```text
-/catalogo
-   │  (clica em card do profissional)
-   ▼
-/catalogo/$id                ← perfil público + horários
-   │  (escolhe data/horário)
-   ▼
-/catalogo/$id/opcoes         ← tipo de consulta + 1ª vez?
-   │
-   ▼
-/catalogo/$id/reservar       ← dados de contato (para mim / outra pessoa)
-   │
-   ▼
-/catalogo/$id/confirmacao    ← agendamento confirmado
-```
+### 2. Header do paciente (card branco)
+Mostrar todos os dados que já capturamos no cadastro:
+- `PatientAvatar` grande (96px)
+- Nome (display)
+- Idade calculada a partir de `birthDate` + data de nascimento
+- Gênero
+- Email, WhatsApp (com ícones)
+- Status (Select inline já existente)
+- Tags
+- Se `isMinor`: bloco "Responsável" com nome/email/telefone
+- Observações (linha curta)
+- Botão "Nova sessão" no canto direito
 
-### 1. Card no /catalogo
-- Ao clicar no card, navegar para `/catalogo/$id` (em vez de abrir modal). Remover o `ProfileModal`.
-- Adicionar no card o selo verde "Pagamento online" e a linha "Teleconsulta — R$ XXX" no rodapé (visual sutil, mantendo paleta atual: badge `bg-emerald-50 text-emerald-700` discreto).
+### 3. Sistema de abas
+Usar `@/components/ui/tabs` (shadcn) com 3 abas. Estilo: tabs horizontais com underline na cor primary, sem o visual escuro do print — manter clean.
 
-### 2. Página /catalogo/$id (perfil público)
-Layout em duas colunas (mantém header azul do catálogo):
-- **Esquerda (card branco)**: avatar, nome + ícone verified azul LinkedIn, especialidade, registro, bio, lista de atendimento (online/presencial, cidade), preço da consulta.
-- **Direita (card branco)**: grade de horários por dia (Hoje, Amanhã, +2 dias seguintes), gerados deterministicamente. Botões de horário em `rounded-lg` com `bg-primary/8 text-primary hover:bg-primary/15`. Setas para navegar dias. Link "Mostrar mais horários".
-- Header: botão voltar para `/catalogo`.
+#### 3.1 Aba "Atendimentos" (default)
+- **Card "Próxima sessão"**: data/hora, duração, valor, status pagamento da próxima `Session` agendada para o paciente. Se não houver, mostrar empty state com botão "Agendar sessão" abrindo o `NewSessionDialog` já existente.
+- **Card "Anotações da sessão"**:
+  - Select de template (expandir `sessionTemplates` em `mock-data.ts` com mais opções e conteúdo HTML rico de exemplo: TCC padrão, Psicanálise, Humanista/ACP, Anamnese inicial, Sessão de retorno, Encerramento).
+  - **Rich Text Editor**: usar TipTap (`@tiptap/react` + `@tiptap/starter-kit` + `@tiptap/extension-placeholder`). Adicionar via `bun add`. Toolbar simples: Bold, Italic, Underline, Headings (H2/H3), listas (bullet/numbered), blockquote, undo/redo.
+  - Ao escolher template, fazer `editor.commands.setContent(htmlDoTemplate)`.
+  - Botão "Salvar anotações": cria entrada na timeline (estado local), associada à próxima sessão (ou à sessão selecionada). Marca a sessão como `done` e adiciona o HTML como `notes`.
 
-### 3. Página /catalogo/$id/opcoes
-- Card "Selecione as opções da consulta": tipo de visita (Teleconsulta selecionada por padrão, mostra preço), pergunta "É a sua primeira consulta?" (Sim/Não com radio).
-- Card lateral resumo: foto, nome, especialidade, data/hora escolhida (vem da query string `?date=...&time=...`), link "Mudar a data" volta para `/catalogo/$id`.
-- Botão primário "Continuar" → `/catalogo/$id/reservar`.
+#### 3.2 Aba "Histórico de sessões"
+- Linha do tempo vertical (linha primary/20 à esquerda + bullets primary).
+- Para cada sessão `done` (ordem desc), mostrar card colapsável (`Collapsible` ou `Accordion` shadcn):
+  - Cabeçalho: data formatada (dia/mês/ano), hora, duração, status pagamento (badge), chevron.
+  - Conteúdo expandido: HTML das anotações renderizado (`prose` tailwind), botões "Editar" (reabre na aba Atendimentos) e "Exportar PDF" (placeholder).
 
-### 4. Página /catalogo/$id/reservar
-- Card "Verificar e reservar":
-  - "Para quem é a consulta?" (Para mim / Para outra pessoa — radio cards).
-  - Dados de contato: celular (com DDI), e-mail, repetir e-mail.
-  - Comentários para especialista (collapsible opcional).
-  - Checkbox de autorização obrigatório + checkbox opcional de comunicações.
-- Card lateral mantém resumo (foto, nome, data/hora, modalidade, preço).
-- Botão "Continuar" → `/catalogo/$id/confirmacao`.
+#### 3.3 Aba "Financeiro"
+Estender o tipo `Session.payment_status` para incluir `"isento"` (atualizar `src/lib/types.ts`).
+- **Resumo (3 KPIs em cards)**: Total recebido, A receber (apenas pending), Isentos. Linha extra: Total de sessões, Sessões pagas, Pendentes, Isentas.
+- **Tabela/Extrato**: lista de todas as sessões do paciente com data, valor, status (`Select` inline para alternar entre Pago / Pendente / Isento). Cada mudança recalcula os KPIs (estado local).
+- Filtro por status no topo da tabela (opcional simples).
 
-### 5. Página /catalogo/$id/confirmacao
-- Tela centralizada com ícone de check, "Consulta agendada com sucesso!", resumo (profissional, data/hora, modalidade, preço), instruções ("o profissional enviará as instruções por e-mail"), botões "Voltar ao catálogo" e "Ver no Google Calendar" (mock, link `#`).
+### Arquivos alterados/criados
 
-### Detalhes técnicos
-- Estado entre páginas: passar `date`, `time`, `type`, `firstTime`, `forWhom` via search params (TanStack `validateSearch`) — sem context global.
-- Função util `priceFor(id)` movida para `src/lib/catalog-utils.ts` (compartilhada entre rotas).
-- Função util `slotsForProfessional(id, dayOffset)` para gerar horários determinísticos.
-- Header azul reutilizado: extrair `<CatalogHeader />` para `src/components/CatalogHeader.tsx`.
-- Manter selo verified em azul LinkedIn (`#0A66C2`) consistente em todas as telas.
-- Todos os botões primários `rounded-lg` (regra do design system), nunca `rounded-full`.
+- **edit** `src/lib/types.ts`: `payment_status: "pending" | "paid" | "isento"`.
+- **edit** `src/lib/mock-data.ts`: expandir `sessionTemplates` (5–6 templates com conteúdo HTML), adicionar mais sessões `done` para `p4` e outros pacientes para popular histórico/financeiro.
+- **new** `src/components/RichTextEditor.tsx`: wrapper TipTap com toolbar + prop `value`/`onChange`/`ref` para `setContent`.
+- **edit** `src/routes/pacientes.$id.tsx`: reescrita completa conforme acima.
+- **deps**: `bun add @tiptap/react @tiptap/starter-kit @tiptap/extension-placeholder @tiptap/extension-underline`.
 
-### Arquivos
-- Novo: `src/routes/catalogo.$id.tsx`
-- Novo: `src/routes/catalogo.$id.opcoes.tsx`
-- Novo: `src/routes/catalogo.$id.reservar.tsx`
-- Novo: `src/routes/catalogo.$id.confirmacao.tsx`
-- Novo: `src/components/CatalogHeader.tsx`
-- Novo: `src/lib/catalog-utils.ts`
-- Editar: `src/routes/catalogo.tsx` (remover modal, navegar para perfil, adicionar badge "Pagamento online", usar header extraído)
+### Notas técnicas
+- Estado tudo client-side (mock). Mutações apenas em `useState` local; persistência real virá depois.
+- Renderização do HTML salvo usa `dangerouslySetInnerHTML` com classe `prose prose-sm` (TipTap produz HTML seguro do nosso próprio editor).
+- Idade calculada com helper local a partir de `birthDate`.
+
+### Pergunta
+Posso prosseguir adicionando o TipTap como Rich Text Editor? É a opção leve e padrão para React. Se preferir outro (ex.: Lexical), me avise.
