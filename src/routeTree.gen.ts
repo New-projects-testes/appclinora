@@ -20,6 +20,10 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PacientesIndexRouteImport } from './routes/pacientes.index'
 import { Route as PacientesIdRouteImport } from './routes/pacientes.$id'
+import { Route as CatalogoIdRouteImport } from './routes/catalogo.$id'
+import { Route as CatalogoIdReservarRouteImport } from './routes/catalogo.$id.reservar'
+import { Route as CatalogoIdOpcoesRouteImport } from './routes/catalogo.$id.opcoes'
+import { Route as CatalogoIdConfirmacaoRouteImport } from './routes/catalogo.$id.confirmacao'
 
 const TarefasRoute = TarefasRouteImport.update({
   id: '/tarefas',
@@ -76,46 +80,78 @@ const PacientesIdRoute = PacientesIdRouteImport.update({
   path: '/pacientes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CatalogoIdRoute = CatalogoIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CatalogoRoute,
+} as any)
+const CatalogoIdReservarRoute = CatalogoIdReservarRouteImport.update({
+  id: '/reservar',
+  path: '/reservar',
+  getParentRoute: () => CatalogoIdRoute,
+} as any)
+const CatalogoIdOpcoesRoute = CatalogoIdOpcoesRouteImport.update({
+  id: '/opcoes',
+  path: '/opcoes',
+  getParentRoute: () => CatalogoIdRoute,
+} as any)
+const CatalogoIdConfirmacaoRoute = CatalogoIdConfirmacaoRouteImport.update({
+  id: '/confirmacao',
+  path: '/confirmacao',
+  getParentRoute: () => CatalogoIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
   '/tarefas': typeof TarefasRoute
+  '/catalogo/$id': typeof CatalogoIdRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes/': typeof PacientesIndexRoute
+  '/catalogo/$id/confirmacao': typeof CatalogoIdConfirmacaoRoute
+  '/catalogo/$id/opcoes': typeof CatalogoIdOpcoesRoute
+  '/catalogo/$id/reservar': typeof CatalogoIdReservarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
   '/tarefas': typeof TarefasRoute
+  '/catalogo/$id': typeof CatalogoIdRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes': typeof PacientesIndexRoute
+  '/catalogo/$id/confirmacao': typeof CatalogoIdConfirmacaoRoute
+  '/catalogo/$id/opcoes': typeof CatalogoIdOpcoesRoute
+  '/catalogo/$id/reservar': typeof CatalogoIdReservarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
   '/login': typeof LoginRoute
   '/tarefas': typeof TarefasRoute
+  '/catalogo/$id': typeof CatalogoIdRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes/': typeof PacientesIndexRoute
+  '/catalogo/$id/confirmacao': typeof CatalogoIdConfirmacaoRoute
+  '/catalogo/$id/opcoes': typeof CatalogoIdOpcoesRoute
+  '/catalogo/$id/reservar': typeof CatalogoIdReservarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,8 +165,12 @@ export interface FileRouteTypes {
     | '/financas'
     | '/login'
     | '/tarefas'
+    | '/catalogo/$id'
     | '/pacientes/$id'
     | '/pacientes/'
+    | '/catalogo/$id/confirmacao'
+    | '/catalogo/$id/opcoes'
+    | '/catalogo/$id/reservar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,8 +182,12 @@ export interface FileRouteTypes {
     | '/financas'
     | '/login'
     | '/tarefas'
+    | '/catalogo/$id'
     | '/pacientes/$id'
     | '/pacientes'
+    | '/catalogo/$id/confirmacao'
+    | '/catalogo/$id/opcoes'
+    | '/catalogo/$id/reservar'
   id:
     | '__root__'
     | '/'
@@ -155,15 +199,19 @@ export interface FileRouteTypes {
     | '/financas'
     | '/login'
     | '/tarefas'
+    | '/catalogo/$id'
     | '/pacientes/$id'
     | '/pacientes/'
+    | '/catalogo/$id/confirmacao'
+    | '/catalogo/$id/opcoes'
+    | '/catalogo/$id/reservar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   CadastroRoute: typeof CadastroRoute
-  CatalogoRoute: typeof CatalogoRoute
+  CatalogoRoute: typeof CatalogoRouteWithChildren
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   FinancasRoute: typeof FinancasRoute
@@ -252,14 +300,70 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacientesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/catalogo/$id': {
+      id: '/catalogo/$id'
+      path: '/$id'
+      fullPath: '/catalogo/$id'
+      preLoaderRoute: typeof CatalogoIdRouteImport
+      parentRoute: typeof CatalogoRoute
+    }
+    '/catalogo/$id/reservar': {
+      id: '/catalogo/$id/reservar'
+      path: '/reservar'
+      fullPath: '/catalogo/$id/reservar'
+      preLoaderRoute: typeof CatalogoIdReservarRouteImport
+      parentRoute: typeof CatalogoIdRoute
+    }
+    '/catalogo/$id/opcoes': {
+      id: '/catalogo/$id/opcoes'
+      path: '/opcoes'
+      fullPath: '/catalogo/$id/opcoes'
+      preLoaderRoute: typeof CatalogoIdOpcoesRouteImport
+      parentRoute: typeof CatalogoIdRoute
+    }
+    '/catalogo/$id/confirmacao': {
+      id: '/catalogo/$id/confirmacao'
+      path: '/confirmacao'
+      fullPath: '/catalogo/$id/confirmacao'
+      preLoaderRoute: typeof CatalogoIdConfirmacaoRouteImport
+      parentRoute: typeof CatalogoIdRoute
+    }
   }
 }
+
+interface CatalogoIdRouteChildren {
+  CatalogoIdConfirmacaoRoute: typeof CatalogoIdConfirmacaoRoute
+  CatalogoIdOpcoesRoute: typeof CatalogoIdOpcoesRoute
+  CatalogoIdReservarRoute: typeof CatalogoIdReservarRoute
+}
+
+const CatalogoIdRouteChildren: CatalogoIdRouteChildren = {
+  CatalogoIdConfirmacaoRoute: CatalogoIdConfirmacaoRoute,
+  CatalogoIdOpcoesRoute: CatalogoIdOpcoesRoute,
+  CatalogoIdReservarRoute: CatalogoIdReservarRoute,
+}
+
+const CatalogoIdRouteWithChildren = CatalogoIdRoute._addFileChildren(
+  CatalogoIdRouteChildren,
+)
+
+interface CatalogoRouteChildren {
+  CatalogoIdRoute: typeof CatalogoIdRouteWithChildren
+}
+
+const CatalogoRouteChildren: CatalogoRouteChildren = {
+  CatalogoIdRoute: CatalogoIdRouteWithChildren,
+}
+
+const CatalogoRouteWithChildren = CatalogoRoute._addFileChildren(
+  CatalogoRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   CadastroRoute: CadastroRoute,
-  CatalogoRoute: CatalogoRoute,
+  CatalogoRoute: CatalogoRouteWithChildren,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   FinancasRoute: FinancasRoute,
