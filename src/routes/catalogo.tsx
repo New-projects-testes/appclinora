@@ -149,12 +149,30 @@ function Catalogo() {
               <Switch checked={presential} onCheckedChange={setPresential} />
             </div>
           </div>
+
+          <div className="pt-4 border-t border-border">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Faixa de preço</label>
+            </div>
+            <Slider
+              min={PRICE_MIN}
+              max={PRICE_MAX}
+              step={10}
+              value={priceRange}
+              onValueChange={(v) => setPriceRange([v[0], v[1]] as [number, number])}
+              className="mt-2"
+            />
+            <div className="flex items-center justify-between mt-3 text-sm">
+              <span className="text-muted-foreground">R$ {priceRange[0]}</span>
+              <span className="text-muted-foreground">R$ {priceRange[1]}</span>
+            </div>
+          </div>
         </aside>
 
         {/* Cards */}
         <div>
           <p className="text-sm text-muted-foreground mb-4">{filtered.length} profissionais encontrados</p>
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
             {filtered.map((p) => {
               const price = priceFor(p.id);
               return (
