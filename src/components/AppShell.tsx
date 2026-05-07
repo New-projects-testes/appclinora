@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex w-full bg-background">
       <aside className="hidden md:flex w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border sticky top-0 h-screen">
         <div className="px-6 py-7">
-          <Link to="/dashboard" className="flex items-baseline gap-1.5">
+          <Link to="/dashboard" className="flex items-baseline">
             <span className="font-display text-2xl tracking-tight text-sidebar-foreground">
               Clinora
             </span>
