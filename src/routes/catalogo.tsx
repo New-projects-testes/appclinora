@@ -58,15 +58,15 @@ function Catalogo() {
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           </Link>
           <div className="flex items-center gap-5">
+            <Link to="/login" className="text-sm font-medium hover:underline underline-offset-4">
+              Entrar
+            </Link>
             <Link
               to="/cadastro"
               className="hidden sm:inline-flex items-center gap-2 bg-accent text-accent-foreground font-medium rounded-lg px-4 py-2.5 text-sm hover:opacity-90 transition"
             >
               Quero ser encontrado(a) no catálogo
               <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link to="/login" className="text-sm font-medium hover:underline underline-offset-4">
-              Entrar
             </Link>
           </div>
         </div>
