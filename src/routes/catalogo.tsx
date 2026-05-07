@@ -33,15 +33,18 @@ function Catalogo() {
   const [location, setLocation] = useState("");
   const [online, setOnline] = useState(false);
   const [presential, setPresential] = useState(false);
+  const [priceRange, setPriceRange] = useState<[number, number]>([PRICE_MIN, PRICE_MAX]);
   const [open, setOpen] = useState<Professional | null>(null);
 
   const specialties = ["Todas", ...Array.from(new Set(catalog.map((p) => p.specialty)))];
 
-  const visible = catalog.filter((p) => p.catalog_visible && p.verification_status);
+  const visible = useMemo(() => catalog.filter((p) => p.catalog_visible && p.verification_status), []);
   const filtered = useMemo(() => visible.filter((p) => {
     if (specialty !== "Todas" && p.specialty !== specialty) return false;
     if (online && !p.accepts_online) return false;
     if (presential && !p.accepts_presential) return false;
+    const price = priceFor(p.id);
+    if (price < priceRange[0] || price > priceRange[1]) return false;
     if (location) {
       const l = location.toLowerCase();
       if (!p.city.toLowerCase().includes(l) && !p.state.toLowerCase().includes(l)) return false;
@@ -51,7 +54,7 @@ function Catalogo() {
       return p.name.toLowerCase().includes(s) || p.specialty.toLowerCase().includes(s) || p.city.toLowerCase().includes(s);
     }
     return true;
-  }), [visible, specialty, online, presential, location, q]);
+  }), [visible, specialty, online, presential, location, q, priceRange]);
 
   return (
     <div className="min-h-screen bg-background">
