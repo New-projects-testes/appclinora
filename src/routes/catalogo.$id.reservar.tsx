@@ -1,20 +1,18 @@
 import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-router";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { z } from "zod";
 import { catalog } from "@/lib/mock-data";
 import { CatalogHeader } from "@/components/CatalogHeader";
 import { priceFor, formatFullDate, LINKEDIN_BLUE } from "@/lib/catalog-utils";
 import { ArrowLeft, BadgeCheck, Calendar, CreditCard, Video } from "lucide-react";
 import { useState } from "react";
 
-const searchSchema = z.object({
-  date: fallback(z.string(), "").default(""),
-  time: fallback(z.string(), "").default(""),
-  firstTime: fallback(z.enum(["sim", "nao"]), "sim").default("sim"),
-});
+type ReservarSearch = { date: string; time: string; firstTime: "sim" | "nao" };
 
 export const Route = createFileRoute("/catalogo/$id/reservar")({
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (s: Record<string, unknown>): ReservarSearch => ({
+    date: typeof s.date === "string" ? s.date : "",
+    time: typeof s.time === "string" ? s.time : "",
+    firstTime: s.firstTime === "nao" ? "nao" : "sim",
+  }),
   loader: ({ params }) => {
     const pro = catalog.find((p) => p.id === params.id && p.catalog_visible);
     if (!pro) throw notFound();

@@ -1,18 +1,16 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { z } from "zod";
 import { catalog } from "@/lib/mock-data";
 import { CatalogHeader } from "@/components/CatalogHeader";
 import { priceFor, formatFullDate, LINKEDIN_BLUE } from "@/lib/catalog-utils";
 import { BadgeCheck, Calendar, CheckCircle2, Video, Mail } from "lucide-react";
 
-const searchSchema = z.object({
-  date: fallback(z.string(), "").default(""),
-  time: fallback(z.string(), "").default(""),
-});
+type ConfirmacaoSearch = { date: string; time: string };
 
 export const Route = createFileRoute("/catalogo/$id/confirmacao")({
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (s: Record<string, unknown>): ConfirmacaoSearch => ({
+    date: typeof s.date === "string" ? s.date : "",
+    time: typeof s.time === "string" ? s.time : "",
+  }),
   loader: ({ params }) => {
     const pro = catalog.find((p) => p.id === params.id && p.catalog_visible);
     if (!pro) throw notFound();
