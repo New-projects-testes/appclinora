@@ -1,14 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { catalog } from "@/lib/mock-data";
-import type { Professional } from "@/lib/types";
 import { useMemo, useState } from "react";
-import { Search, MapPin, Globe2, Building2, X, Mail, Phone, BadgeCheck, ArrowRight } from "lucide-react";
+import { Search, MapPin, Globe2, Building2, BadgeCheck, CreditCard } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { CatalogHeader } from "@/components/CatalogHeader";
+import { priceFor, LINKEDIN_BLUE } from "@/lib/catalog-utils";
 
 const PRICE_MIN = 150;
 const PRICE_MAX = 350;
-const LINKEDIN_BLUE = "#0A66C2";
 
 export const Route = createFileRoute("/catalogo")({
   head: () => ({
@@ -20,21 +20,14 @@ export const Route = createFileRoute("/catalogo")({
   component: Catalogo,
 });
 
-// Deterministic price per professional (mock)
-const priceFor = (id: string) => {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return 150 + (h % 9) * 25; // 150..350
-};
-
 function Catalogo() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [specialty, setSpecialty] = useState<string>("Todas");
   const [location, setLocation] = useState("");
   const [online, setOnline] = useState(false);
   const [presential, setPresential] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([PRICE_MIN, PRICE_MAX]);
-  const [open, setOpen] = useState<Professional | null>(null);
 
   const specialties = ["Todas", ...Array.from(new Set(catalog.map((p) => p.specialty)))];
 
@@ -58,29 +51,8 @@ function Catalogo() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* HEADER */}
-      <header className="bg-primary text-primary-foreground sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-baseline">
-            <span className="font-display text-2xl">Clinora</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-          </Link>
-          <div className="flex items-center gap-5">
-            <Link to="/login" className="text-sm font-medium hover:underline underline-offset-4">
-              Entrar
-            </Link>
-            <Link
-              to="/cadastro"
-              className="hidden sm:inline-flex items-center gap-2 bg-accent text-accent-foreground font-medium rounded-lg px-4 py-2.5 text-sm hover:opacity-90 transition"
-            >
-              Quero ser encontrado(a) no catálogo
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <CatalogHeader />
 
-      {/* HERO */}
       <section className="max-w-3xl mx-auto px-6 pt-20 pb-12 text-center">
         <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Catálogo público</p>
         <h1 className="font-display text-5xl md:text-6xl mt-3 tracking-tight">
@@ -101,13 +73,9 @@ function Catalogo() {
         </div>
       </section>
 
-      {/* CONTENT: sidebar filters + cards */}
       <section className="max-w-6xl mx-auto px-6 pb-24 grid lg:grid-cols-[260px_1fr] gap-8">
-        {/* Filters sidebar */}
         <aside className="bg-card border border-border rounded-2xl p-5 h-fit lg:sticky lg:top-24 space-y-6">
-          <div>
-            <h3 className="font-display text-lg mb-4">Filtros</h3>
-          </div>
+          <h3 className="font-display text-lg">Filtros</h3>
 
           <div>
             <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Especialidade</label>
@@ -151,16 +119,14 @@ function Catalogo() {
           </div>
 
           <div className="pt-4 border-t border-border">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Faixa de preço</label>
-            </div>
+            <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Faixa de preço</label>
             <Slider
               min={PRICE_MIN}
               max={PRICE_MAX}
               step={10}
               value={priceRange}
               onValueChange={(v) => setPriceRange([v[0], v[1]] as [number, number])}
-              className="mt-2"
+              className="mt-3"
             />
             <div className="flex items-center justify-between mt-3 text-sm">
               <span className="text-muted-foreground">R$ {priceRange[0]}</span>
@@ -169,7 +135,6 @@ function Catalogo() {
           </div>
         </aside>
 
-        {/* Cards */}
         <div>
           <p className="text-sm text-muted-foreground mb-4">{filtered.length} profissionais encontrados</p>
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -178,9 +143,12 @@ function Catalogo() {
               return (
                 <button
                   key={p.id}
-                  onClick={() => setOpen(p)}
+                  onClick={() => navigate({ to: "/catalogo/$id", params: { id: p.id } })}
                   className="text-left bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all"
                 >
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-emerald-50 text-emerald-700 rounded-md px-2 py-0.5 mb-3">
+                    <CreditCard className="h-3 w-3" /> Pagamento online
+                  </span>
                   <div className="flex items-start gap-4">
                     <img src={p.avatar} alt="" className="h-16 w-16 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
@@ -198,7 +166,7 @@ function Catalogo() {
                     {p.accepts_presential && <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" />Presencial</span>}
                   </div>
                   <div className="mt-5 pt-4 border-t border-border flex items-baseline justify-between">
-                    <span className="text-xs text-muted-foreground">Consulta a partir de</span>
+                    <span className="text-xs text-muted-foreground">Teleconsulta a partir de</span>
                     <span className="font-display text-lg text-foreground">R$ {price}</span>
                   </div>
                 </button>
@@ -214,62 +182,9 @@ function Catalogo() {
         </div>
       </section>
 
-      {open && <ProfileModal pro={open} onClose={() => setOpen(null)} />}
-
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
         © 2026 Clinora · feito com cuidado
       </footer>
-    </div>
-  );
-}
-
-function ProfileModal({ pro, onClose }: { pro: Professional; onClose: () => void }) {
-  const [contact, setContact] = useState(false);
-  const price = priceFor(pro.id);
-  return (
-    <div className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-card rounded-3xl max-w-lg w-full p-8 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-secondary rounded-full">
-          <X className="h-4 w-4" />
-        </button>
-        <div className="flex items-center gap-4">
-          <img src={pro.avatar} alt="" className="h-20 w-20 rounded-full object-cover" />
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h2 className="font-display text-2xl">{pro.name}</h2>
-              <BadgeCheck className="h-5 w-5 shrink-0" style={{ color: "white", fill: LINKEDIN_BLUE }} aria-label="Profissional verificado" />
-            </div>
-            <p className="text-primary">{pro.specialty}</p>
-            <p className="text-xs text-muted-foreground mt-1">{pro.registration_type} {pro.registration_number}</p>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground mt-5">{pro.bio}</p>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-4 flex-wrap">
-          <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{pro.city}, {pro.state}</span>
-          {pro.accepts_online && <span className="inline-flex items-center gap-1"><Globe2 className="h-3 w-3" />Online</span>}
-          {pro.accepts_presential && <span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" />Presencial</span>}
-        </div>
-        <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4">
-          <span className="text-sm text-muted-foreground">Consulta a partir de</span>
-          <span className="font-display text-xl">R$ {price}</span>
-        </div>
-
-        {contact ? (
-          <div className="mt-6 p-4 bg-secondary/50 rounded-xl space-y-2 text-sm">
-            <p className="inline-flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> {pro.email}</p>
-            <p className="inline-flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> Solicite via e-mail</p>
-          </div>
-        ) : (
-          <div className="mt-6 flex gap-3">
-            <button onClick={() => setContact(true)} className="flex-1 bg-primary text-primary-foreground rounded-lg py-3 text-sm font-medium hover:bg-primary/90">
-              Entrar em contato
-            </button>
-            <a href={`https://clinora.app/agendar/${pro.id}`} target="_blank" rel="noreferrer" className="flex-1 border border-border rounded-lg py-3 text-sm font-medium text-center hover:bg-secondary">
-              Marcar consulta
-            </a>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
