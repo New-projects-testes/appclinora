@@ -35,7 +35,14 @@ function Login() {
             const { error } = await signIn(email, pw);
             setLoading(false);
             if (error) {
-              toast.error(error.message === "Invalid login credentials" ? "E-mail ou senha incorretos" : error.message);
+              const msg = error.message?.toLowerCase() ?? "";
+              if (msg.includes("invalid login credentials") || msg.includes("invalid_credentials")) {
+                toast.error("Não encontramos uma conta com esses dados. Verifique seu e-mail e senha ou crie uma conta.");
+              } else if (msg.includes("email not confirmed")) {
+                toast.error("Confirme seu e-mail antes de entrar.");
+              } else {
+                toast.error(error.message);
+              }
               return;
             }
             navigate({ to: "/dashboard" });
