@@ -20,6 +20,7 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PacientesIndexRouteImport } from './routes/pacientes.index'
 import { Route as PacientesIdRouteImport } from './routes/pacientes.$id'
+import { Route as CatalogoAgendarProIdRouteImport } from './routes/catalogo.agendar.$proId'
 
 const TarefasRoute = TarefasRouteImport.update({
   id: '/tarefas',
@@ -76,12 +77,17 @@ const PacientesIdRoute = PacientesIdRouteImport.update({
   path: '/pacientes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CatalogoAgendarProIdRoute = CatalogoAgendarProIdRouteImport.update({
+  id: '/agendar/$proId',
+  path: '/agendar/$proId',
+  getParentRoute: () => CatalogoRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
@@ -89,12 +95,13 @@ export interface FileRoutesByFullPath {
   '/tarefas': typeof TarefasRoute
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes/': typeof PacientesIndexRoute
+  '/catalogo/agendar/$proId': typeof CatalogoAgendarProIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
@@ -102,13 +109,14 @@ export interface FileRoutesByTo {
   '/tarefas': typeof TarefasRoute
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes': typeof PacientesIndexRoute
+  '/catalogo/agendar/$proId': typeof CatalogoAgendarProIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRoute
+  '/catalogo': typeof CatalogoRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/tarefas': typeof TarefasRoute
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes/': typeof PacientesIndexRoute
+  '/catalogo/agendar/$proId': typeof CatalogoAgendarProIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/pacientes/$id'
     | '/pacientes/'
+    | '/catalogo/agendar/$proId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/pacientes/$id'
     | '/pacientes'
+    | '/catalogo/agendar/$proId'
   id:
     | '__root__'
     | '/'
@@ -157,13 +168,14 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/pacientes/$id'
     | '/pacientes/'
+    | '/catalogo/agendar/$proId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   CadastroRoute: typeof CadastroRoute
-  CatalogoRoute: typeof CatalogoRoute
+  CatalogoRoute: typeof CatalogoRouteWithChildren
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   FinancasRoute: typeof FinancasRoute
@@ -252,14 +264,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacientesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/catalogo/agendar/$proId': {
+      id: '/catalogo/agendar/$proId'
+      path: '/agendar/$proId'
+      fullPath: '/catalogo/agendar/$proId'
+      preLoaderRoute: typeof CatalogoAgendarProIdRouteImport
+      parentRoute: typeof CatalogoRoute
+    }
   }
 }
+
+interface CatalogoRouteChildren {
+  CatalogoAgendarProIdRoute: typeof CatalogoAgendarProIdRoute
+}
+
+const CatalogoRouteChildren: CatalogoRouteChildren = {
+  CatalogoAgendarProIdRoute: CatalogoAgendarProIdRoute,
+}
+
+const CatalogoRouteWithChildren = CatalogoRoute._addFileChildren(
+  CatalogoRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   CadastroRoute: CadastroRoute,
-  CatalogoRoute: CatalogoRoute,
+  CatalogoRoute: CatalogoRouteWithChildren,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   FinancasRoute: FinancasRoute,
