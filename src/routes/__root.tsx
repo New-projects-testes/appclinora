@@ -70,11 +70,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 import { AuthProvider } from "@/lib/auth";
+import { Toaster } from "@/components/ui/sonner";
 
 function RootComponent() {
   return (
     <AuthProvider>
       <Outlet />
+      <Toaster richColors position="top-right" />
     </AuthProvider>
   );
 }
