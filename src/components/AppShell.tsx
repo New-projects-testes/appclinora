@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Calendar,
@@ -9,7 +9,8 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { currentUser } from "@/lib/mock-data";
+import { useAuth } from "@/lib/auth";
+import { RequireAuth } from "./RequireAuth";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -22,7 +23,26 @@ const items = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <RequireAuth>
+      <AppShellInner>{children}</AppShellInner>
+    </RequireAuth>
+  );
+}
+
+function AppShellInner({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const { profile, user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const displayName = profile?.name || user?.email?.split("@")[0] || "Profissional";
+  const displaySpecialty = profile?.specialty || "—";
+  const avatarLetter = displayName.charAt(0).toUpperCase();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate({ to: "/" });
+  };
 
   return (
     <div className="min-h-screen flex w-full bg-background">
@@ -60,24 +80,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="p-3 border-t border-sidebar-border">
           <div className="flex items-center gap-3 px-2 py-2">
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-sidebar"
-            />
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={displayName}
+                className="h-9 w-9 rounded-full object-cover ring-2 ring-sidebar"
+              />
+            ) : (
+              <div className="h-9 w-9 rounded-full bg-accent/20 text-accent flex items-center justify-center font-medium ring-2 ring-sidebar">
+                {avatarLetter}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {currentUser.name}
+                {displayName}
               </p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">{currentUser.specialty}</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">{displaySpecialty}</p>
             </div>
-            <Link
-              to="/login"
+            <button
+              onClick={handleSignOut}
               className="text-sidebar-foreground/60 hover:text-white"
               aria-label="Sair"
             >
               <LogOut className="h-4 w-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -86,3 +112,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
