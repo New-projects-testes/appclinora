@@ -19,8 +19,8 @@ function Login() {
       <div className="hidden md:flex flex-col justify-between bg-primary text-primary-foreground p-10">
         <Link to="/" className="font-display text-2xl">Clinora</Link>
         <div>
-          <p className="font-display text-4xl leading-tight italic">
-            "Mais tempo para escutar. Menos tempo na planilha."
+          <p className="font-display leading-tight italic text-5xl">
+            {"\n"}
           </p>
           <p className="mt-4 text-sm opacity-80">— Dra. Marina, psicóloga clínica</p>
         </div>
