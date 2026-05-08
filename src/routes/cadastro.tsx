@@ -149,8 +149,8 @@ function Cadastro() {
                   <ArrowLeft className="h-4 w-4" /> Voltar
                 </button>
               )}
-              <button type="submit" className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-medium rounded-full py-3 hover:bg-primary/90 transition">
-                {step === 1 ? "Continuar" : "Começar agora"} <ArrowRight className="h-4 w-4" />
+              <button type="submit" disabled={loading} className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-medium rounded-lg py-3 hover:bg-primary/90 transition disabled:opacity-60">
+                {loading ? "Criando conta…" : step === 1 ? "Continuar" : "Começar agora"} <ArrowRight className="h-4 w-4" />
               </button>
             </div>
 
