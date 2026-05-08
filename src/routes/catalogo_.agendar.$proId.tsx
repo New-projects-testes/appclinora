@@ -1,22 +1,10 @@
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
-import { catalog } from "@/lib/mock-data";
-import type { Professional } from "@/lib/types";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight,
-  ArrowLeft,
-  BadgeCheck,
-  Calendar as CalendarIcon,
-  Check,
-  CheckCircle2,
-  Globe2,
-  Building2,
-  MapPin,
-  Video,
-  User,
-  Users,
+  ArrowRight, ArrowLeft, BadgeCheck, Calendar as CalendarIcon, Check, CheckCircle2,
+  Globe2, Building2, MapPin, Video, User, Users,
 } from "lucide-react";
-import { priceFor, slotsFor, LINKEDIN_BLUE } from "@/lib/catalog-utils";
+import { LINKEDIN_BLUE } from "@/lib/catalog-utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +14,29 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { PatientAvatar } from "@/components/PatientAvatar";
+import { toast } from "sonner";
+
+type CatalogProfile = {
+  id: string;
+  name: string;
+  email: string;
+  specialty: string;
+  city: string;
+  state: string;
+  registration_type: string;
+  registration_number: string;
+  bio: string;
+  avatar_url: string | null;
+  accepts_online: boolean;
+  accepts_presential: boolean;
+  catalog_visible: boolean;
+  verification_status: boolean;
+  price_online: number | null;
+  price_presential: number | null;
+};
 
 export const Route = createFileRoute("/catalogo_/agendar/$proId")({
   head: () => ({
@@ -34,10 +45,16 @@ export const Route = createFileRoute("/catalogo_/agendar/$proId")({
       { name: "description", content: "Agende sua consulta com profissionais verificados em poucos passos." },
     ],
   }),
-  loader: ({ params }) => {
-    const pro = catalog.find((p) => p.id === params.proId);
-    if (!pro || !pro.catalog_visible) throw notFound();
-    return { pro };
+  loader: async ({ params }) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, name, email, specialty, city, state, registration_type, registration_number, bio, avatar_url, accepts_online, accepts_presential, catalog_visible, verification_status, price_online, price_presential")
+      .eq("id", params.proId)
+      .eq("catalog_visible", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw notFound();
+    return { pro: data as CatalogProfile };
   },
   errorComponent: ({ error, reset }) => {
     const router = useRouter();
@@ -80,9 +97,16 @@ const personSchema = z.object({
   acceptTerms: z.literal(true, { errorMap: () => ({ message: "É necessário aceitar os termos" }) }),
 }).refine((d) => d.email === d.emailConfirm, { message: "Os e-mails não coincidem", path: ["emailConfirm"] });
 
+function priceFor(pro: CatalogProfile, type: ConsultType | null): number | null {
+  if (type === "online") return pro.price_online ?? null;
+  if (type === "presencial") return pro.price_presential ?? null;
+  const a = pro.price_online, b = pro.price_presential;
+  const arr = [a, b].filter((v): v is number => v !== null && v !== undefined);
+  return arr.length ? Math.min(...arr) : null;
+}
+
 function AgendarPage() {
   const { pro } = Route.useLoaderData();
-  const price = priceFor(pro.id);
 
   const [step, setStep] = useState(1);
   const [consultType, setConsultType] = useState<ConsultType | null>(
@@ -99,22 +123,61 @@ function AgendarPage() {
   const [patientBirth, setPatientBirth] = useState("");
 
   const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    emailConfirm: "",
-    phone: "",
-    comments: "",
-    acceptTerms: false,
-    marketing: false,
+    fullName: "", email: "", emailConfirm: "", phone: "", comments: "",
+    acceptTerms: false, marketing: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
-  const slots = useMemo(() => (date ? slotsFor(pro.id, date) : []), [pro.id, date]);
+  const price = priceFor(pro, consultType);
+
+  // Fetch booked slots for the chosen date
+  const dateKey = date ? date.toISOString().slice(0, 10) : null;
+  const { data: bookedSlots = [] } = useQuery({
+    queryKey: ["booked-slots", pro.id, dateKey],
+    enabled: !!dateKey,
+    queryFn: async () => {
+      const start = new Date(date!); start.setHours(0, 0, 0, 0);
+      const end = new Date(date!); end.setHours(23, 59, 59, 999);
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("date_time")
+        .eq("professional_id", pro.id)
+        .gte("date_time", start.toISOString())
+        .lte("date_time", end.toISOString())
+        .neq("status", "cancelled");
+      if (error) throw error;
+      return (data ?? []).map((b) => {
+        const d = new Date(b.date_time);
+        return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      });
+    },
+  });
+
+  const slots = useMemo(() => {
+    if (!date) return [];
+    const list: { time: string; available: boolean }[] = [];
+    const isToday = date.toDateString() === new Date().toDateString();
+    const now = new Date();
+    for (let hour = 9; hour < 18; hour++) {
+      for (const m of [0, 30]) {
+        const t = `${String(hour).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+        let available = !bookedSlots.includes(t);
+        if (isToday && (hour < now.getHours() || (hour === now.getHours() && m <= now.getMinutes()))) {
+          available = false;
+        }
+        list.push({ time: t, available });
+      }
+    }
+    return list;
+  }, [date, bookedSlots]);
+
+  useEffect(() => { setTime(null); }, [date]);
 
   function next() { setStep((s) => Math.min(4, s + 1)); }
   function prev() { setStep((s) => Math.max(1, s - 1)); }
 
-  function handleSubmitDados() {
+  async function handleSubmitDados() {
     const result = personSchema.safeParse(form);
     if (!result.success) {
       const fe: Record<string, string> = {};
@@ -127,6 +190,31 @@ function AgendarPage() {
       return;
     }
     setErrors({});
+
+    if (!date || !time || !consultType) return;
+    const [h, m] = time.split(":").map(Number);
+    const dt = new Date(date);
+    dt.setHours(h, m, 0, 0);
+
+    setSubmitting(true);
+    const { error } = await supabase.from("bookings").insert({
+      professional_id: pro.id,
+      patient_name: forWhom === "other" ? patientName.trim() : form.fullName.trim(),
+      patient_email: form.email.trim(),
+      patient_phone: form.phone.trim(),
+      date_time: dt.toISOString(),
+      modality: consultType,
+      is_first_consultation: firstTime === "sim",
+      for_self: forWhom === "self",
+      comment: form.comments?.trim() || null,
+      price: price ?? null,
+      status: "pending",
+    });
+    setSubmitting(false);
+    if (error) {
+      toast.error("Não foi possível concluir o agendamento. Tente novamente.");
+      return;
+    }
     next();
   }
 
@@ -135,7 +223,6 @@ function AgendarPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* HEADER (mesmo do /catalogo) */}
       <header className="bg-primary text-primary-foreground sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <Link to="/" className="flex items-baseline">
@@ -144,10 +231,7 @@ function AgendarPage() {
           </Link>
           <div className="flex items-center gap-5">
             <Link to="/login" className="text-sm font-medium hover:underline underline-offset-4">Entrar</Link>
-            <Link
-              to="/cadastro"
-              className="hidden sm:inline-flex items-center gap-2 bg-accent text-accent-foreground font-medium rounded-lg px-4 py-2.5 text-sm hover:opacity-90 transition"
-            >
+            <Link to="/cadastro" className="hidden sm:inline-flex items-center gap-2 bg-accent text-accent-foreground font-medium rounded-lg px-4 py-2.5 text-sm hover:opacity-90 transition">
               Quero ser encontrado(a) no catálogo
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -160,16 +244,13 @@ function AgendarPage() {
           <ArrowLeft className="h-4 w-4" /> Voltar ao catálogo
         </Link>
 
-        {/* Stepper */}
         <Stepper current={step} />
 
         <div className="mt-8 grid lg:grid-cols-[1fr_340px] gap-6">
-          {/* Step content */}
           <div className="bg-card border border-border rounded-2xl p-8">
             {step === 1 && (
               <Step1
                 pro={pro}
-                price={price}
                 consultType={consultType}
                 setConsultType={setConsultType}
                 firstTime={firstTime}
@@ -180,7 +261,7 @@ function AgendarPage() {
               <Step2
                 today={today}
                 date={date}
-                setDate={(d) => { setDate(d); setTime(null); }}
+                setDate={(d) => setDate(d)}
                 time={time}
                 setTime={setTime}
                 slots={slots}
@@ -226,22 +307,15 @@ function AgendarPage() {
                   </Button>
                 )}
                 {step === 3 && (
-                  <Button onClick={handleSubmitDados}>
-                    Confirmar agendamento <Check className="h-4 w-4" />
+                  <Button onClick={handleSubmitDados} disabled={submitting}>
+                    {submitting ? "Enviando..." : "Confirmar agendamento"} <Check className="h-4 w-4" />
                   </Button>
                 )}
               </div>
             )}
           </div>
 
-          {/* Resumo lateral */}
-          <Summary
-            pro={pro}
-            consultType={consultType}
-            date={date}
-            time={time}
-            price={price}
-          />
+          <Summary pro={pro} consultType={consultType} date={date} time={time} price={price} />
         </div>
       </div>
 
@@ -252,7 +326,6 @@ function AgendarPage() {
   );
 }
 
-/* -------- Stepper -------- */
 function Stepper({ current }: { current: number }) {
   return (
     <ol className="flex items-center gap-2 sm:gap-4 w-full">
@@ -286,11 +359,10 @@ function Stepper({ current }: { current: number }) {
   );
 }
 
-/* -------- Step 1 -------- */
 function Step1({
-  pro, price, consultType, setConsultType, firstTime, setFirstTime,
+  pro, consultType, setConsultType, firstTime, setFirstTime,
 }: {
-  pro: Professional; price: number;
+  pro: CatalogProfile;
   consultType: ConsultType | null; setConsultType: (v: ConsultType) => void;
   firstTime: "sim" | "nao"; setFirstTime: (v: "sim" | "nao") => void;
 }) {
@@ -309,7 +381,7 @@ function Step1({
             icon={<Video className="h-5 w-5" />}
             title="Teleconsulta"
             subtitle="Atendimento por vídeo"
-            price={price}
+            price={pro.price_online}
           />
         )}
         {pro.accepts_presential && (
@@ -319,7 +391,7 @@ function Step1({
             icon={<Building2 className="h-5 w-5" />}
             title="Presencial"
             subtitle={`${pro.city}, ${pro.state}`}
-            price={price}
+            price={pro.price_presential}
           />
         )}
       </div>
@@ -341,7 +413,7 @@ function Step1({
 
 function ConsultOption({
   selected, onClick, icon, title, subtitle, price,
-}: { selected: boolean; onClick: () => void; icon: React.ReactNode; title: string; subtitle: string; price: number }) {
+}: { selected: boolean; onClick: () => void; icon: React.ReactNode; title: string; subtitle: string; price: number | null }) {
   return (
     <button
       type="button"
@@ -363,14 +435,13 @@ function ConsultOption({
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground">a partir de</p>
-          <p className="font-display text-lg">R$ {price}</p>
+          <p className="font-display text-lg">{price !== null ? `R$ ${price}` : "Sob consulta"}</p>
         </div>
       </div>
     </button>
   );
 }
 
-/* -------- Step 2 -------- */
 function Step2({
   today, date, setDate, time, setTime, slots,
 }: {
@@ -433,7 +504,6 @@ function Step2({
   );
 }
 
-/* -------- Step 3 -------- */
 function Step3({
   forWhom, setForWhom, patientName, setPatientName, patientBirth, setPatientBirth,
   form, setForm, errors,
@@ -541,10 +611,9 @@ function ForWhomCard({ selected, onClick, icon, label }: { selected: boolean; on
   );
 }
 
-/* -------- Step 4 -------- */
 function Step4({
   pro, date, time, consultType, price, email,
-}: { pro: Professional; date: Date; time: string; consultType: ConsultType; price: number; email: string }) {
+}: { pro: CatalogProfile; date: Date; time: string; consultType: ConsultType; price: number | null; email: string }) {
   return (
     <div className="text-center py-6">
       <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 grid place-items-center">
@@ -560,15 +629,12 @@ function Step4({
         <Row label="Data" value={date.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} />
         <Row label="Horário" value={time} />
         <Row label="Modalidade" value={consultType === "online" ? "Teleconsulta" : "Presencial"} />
-        <Row label="Valor" value={`R$ ${price}`} />
+        <Row label="Valor" value={price !== null ? `R$ ${price}` : "Sob consulta"} />
       </div>
 
       <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
         <Link to="/catalogo" className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-primary/90">
           Voltar ao catálogo
-        </Link>
-        <Link to="/catalogo" className="inline-flex items-center justify-center gap-2 border border-border rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-secondary">
-          Ver outros profissionais
         </Link>
       </div>
     </div>
@@ -584,21 +650,24 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* -------- Resumo lateral -------- */
 function Summary({
   pro, consultType, date, time, price,
-}: { pro: Professional; consultType: ConsultType | null; date: Date | undefined; time: string | null; price: number }) {
+}: { pro: CatalogProfile; consultType: ConsultType | null; date: Date | undefined; time: string | null; price: number | null }) {
   return (
     <aside className="bg-card border border-border rounded-2xl p-6 h-fit lg:sticky lg:top-24 space-y-5">
       <div className="flex items-start gap-3">
-        <img src={pro.avatar} alt="" className="h-14 w-14 rounded-full object-cover" />
+        <PatientAvatar name={pro.name} src={pro.avatar_url ?? undefined} size={56} />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h3 className="font-display text-lg leading-tight truncate">{pro.name}</h3>
-            <BadgeCheck className="h-4 w-4 shrink-0" style={{ color: "white", fill: LINKEDIN_BLUE }} />
+            {pro.verification_status && (
+              <BadgeCheck className="h-4 w-4 shrink-0" style={{ color: "white", fill: LINKEDIN_BLUE }} />
+            )}
           </div>
           <p className="text-sm text-primary">{pro.specialty}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{pro.registration_type} {pro.registration_number}</p>
+          {(pro.registration_type || pro.registration_number) && (
+            <p className="text-xs text-muted-foreground mt-0.5">{pro.registration_type} {pro.registration_number}</p>
+          )}
         </div>
       </div>
 
@@ -614,7 +683,7 @@ function Summary({
             value={consultType === "online" ? "Teleconsulta" : `Presencial — ${pro.city}/${pro.state}`}
           />
         )}
-        <Row label="Valor" value={`R$ ${price}`} />
+        <Row label="Valor" value={price !== null ? `R$ ${price}` : "Sob consulta"} />
       </div>
 
       <div className="border-t border-border pt-4 text-xs text-muted-foreground flex gap-2">
