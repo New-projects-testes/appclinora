@@ -27,7 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/catalogo/agendar/$proId")({
+export const Route = createFileRoute("/catalogo_/agendar/$proId")({
   head: () => ({
     meta: [
       { title: "Agendar consulta — Clinora" },

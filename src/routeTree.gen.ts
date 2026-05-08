@@ -20,7 +20,7 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PacientesIndexRouteImport } from './routes/pacientes.index'
 import { Route as PacientesIdRouteImport } from './routes/pacientes.$id'
-import { Route as CatalogoAgendarProIdRouteImport } from './routes/catalogo.agendar.$proId'
+import { Route as CatalogoAgendarProIdRouteImport } from './routes/catalogo_.agendar.$proId'
 
 const TarefasRoute = TarefasRouteImport.update({
   id: '/tarefas',
@@ -78,16 +78,16 @@ const PacientesIdRoute = PacientesIdRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const CatalogoAgendarProIdRoute = CatalogoAgendarProIdRouteImport.update({
-  id: '/agendar/$proId',
-  path: '/agendar/$proId',
-  getParentRoute: () => CatalogoRoute,
+  id: '/catalogo_/agendar/$proId',
+  path: '/catalogo/agendar/$proId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRouteWithChildren
+  '/catalogo': typeof CatalogoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
@@ -101,7 +101,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRouteWithChildren
+  '/catalogo': typeof CatalogoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
@@ -116,7 +116,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/catalogo': typeof CatalogoRouteWithChildren
+  '/catalogo': typeof CatalogoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/financas': typeof FinancasRoute
@@ -124,7 +124,7 @@ export interface FileRoutesById {
   '/tarefas': typeof TarefasRoute
   '/pacientes/$id': typeof PacientesIdRoute
   '/pacientes/': typeof PacientesIndexRoute
-  '/catalogo/agendar/$proId': typeof CatalogoAgendarProIdRoute
+  '/catalogo_/agendar/$proId': typeof CatalogoAgendarProIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -168,14 +168,14 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/pacientes/$id'
     | '/pacientes/'
-    | '/catalogo/agendar/$proId'
+    | '/catalogo_/agendar/$proId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   CadastroRoute: typeof CadastroRoute
-  CatalogoRoute: typeof CatalogoRouteWithChildren
+  CatalogoRoute: typeof CatalogoRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   FinancasRoute: typeof FinancasRoute
@@ -183,6 +183,7 @@ export interface RootRouteChildren {
   TarefasRoute: typeof TarefasRoute
   PacientesIdRoute: typeof PacientesIdRoute
   PacientesIndexRoute: typeof PacientesIndexRoute
+  CatalogoAgendarProIdRoute: typeof CatalogoAgendarProIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -264,33 +265,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacientesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/catalogo/agendar/$proId': {
-      id: '/catalogo/agendar/$proId'
-      path: '/agendar/$proId'
+    '/catalogo_/agendar/$proId': {
+      id: '/catalogo_/agendar/$proId'
+      path: '/catalogo/agendar/$proId'
       fullPath: '/catalogo/agendar/$proId'
       preLoaderRoute: typeof CatalogoAgendarProIdRouteImport
-      parentRoute: typeof CatalogoRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface CatalogoRouteChildren {
-  CatalogoAgendarProIdRoute: typeof CatalogoAgendarProIdRoute
-}
-
-const CatalogoRouteChildren: CatalogoRouteChildren = {
-  CatalogoAgendarProIdRoute: CatalogoAgendarProIdRoute,
-}
-
-const CatalogoRouteWithChildren = CatalogoRoute._addFileChildren(
-  CatalogoRouteChildren,
-)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   CadastroRoute: CadastroRoute,
-  CatalogoRoute: CatalogoRouteWithChildren,
+  CatalogoRoute: CatalogoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   FinancasRoute: FinancasRoute,
@@ -298,7 +287,17 @@ const rootRouteChildren: RootRouteChildren = {
   TarefasRoute: TarefasRoute,
   PacientesIdRoute: PacientesIdRoute,
   PacientesIndexRoute: PacientesIndexRoute,
+  CatalogoAgendarProIdRoute: CatalogoAgendarProIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
