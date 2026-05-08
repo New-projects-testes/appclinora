@@ -29,8 +29,15 @@ function Login() {
 
       <div className="flex items-center justify-center p-6 md:p-12 bg-background">
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
+            setLoading(true);
+            const { error } = await signIn(email, pw);
+            setLoading(false);
+            if (error) {
+              toast.error(error.message === "Invalid login credentials" ? "E-mail ou senha incorretos" : error.message);
+              return;
+            }
             navigate({ to: "/dashboard" });
           }}
           className="w-full max-w-sm space-y-6"
