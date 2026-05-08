@@ -59,10 +59,31 @@ function Cadastro() {
           </div>
 
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (step === 1) setStep(2);
-              else navigate({ to: "/dashboard" });
+              if (step === 1) {
+                setStep(2);
+                return;
+              }
+              setLoading(true);
+              const [city, state] = form.location.split(",").map((s) => s.trim());
+              const { error } = await signUp(form.email, form.password, {
+                name: form.name,
+                specialty: form.specialty,
+                city: city || form.location,
+                state: state || "",
+                registration_type: form.regType,
+                registration_number: form.regNumber,
+                accepts_online: form.online,
+                accepts_presential: form.presential,
+              });
+              setLoading(false);
+              if (error) {
+                toast.error(error.message);
+                return;
+              }
+              toast.success("Conta criada! Bem-vindo(a) à Clinora.");
+              navigate({ to: "/dashboard" });
             }}
             className="space-y-5"
           >
