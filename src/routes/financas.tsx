@@ -2,17 +2,24 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { PatientAvatar } from "@/components/PatientAvatar";
+import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { sessions as initial, patients } from "@/lib/mock-data";
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Search, ArrowUp, ArrowDown, Calendar as CalendarIcon, X } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Search, ArrowUp, ArrowDown,
+  Calendar as CalendarIcon, X, Wallet,
+} from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const PAYMENT_META = {
   paid: { label: "Pago", description: "Sessão já recebida", className: "bg-success/15 text-success" },
@@ -30,8 +37,45 @@ export const Route = createFileRoute("/financas")({
 function startOfMonth(d = new Date()) { return new Date(d.getFullYear(), d.getMonth(), 1); }
 function endOfMonth(d = new Date()) { return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999); }
 
+type SessionRow = {
+  id: string;
+  patient_id: string;
+  date_time: string;
+  value: number;
+  payment_status: PaymentStatus;
+  patients: { id: string; name: string; email: string | null; avatar_url: string | null } | null;
+};
+
 function Financas() {
-  const [sessions, setSessions] = useState(initial);
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const { data: sessions = [], isLoading } = useQuery({
+    queryKey: ["financas-sessions", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sessions")
+        .select("id, patient_id, date_time, value, payment_status, patients(id, name, email, avatar_url)")
+        .eq("owner_id", user!.id)
+        .order("date_time", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as SessionRow[];
+    },
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("sessions").update({ payment_status: "paid" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Sessão marcada como paga");
+      qc.invalidateQueries({ queryKey: ["financas-sessions", user?.id] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const [range, setRange] = useState<DateRange | undefined>({ from: startOfMonth(), to: endOfMonth() });
   const [q, setQ] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | "all">("all");
@@ -52,10 +96,7 @@ function Financas() {
       if (from !== null && t < from) return false;
       if (to !== null && t > to) return false;
       if (paymentFilter !== "all" && s.payment_status !== paymentFilter) return false;
-      if (term) {
-        const p = patients.find((x) => x.id === s.patient_id);
-        if (!p?.name.toLowerCase().includes(term)) return false;
-      }
+      if (term && !s.patients?.name.toLowerCase().includes(term)) return false;
       return true;
     });
     return list.sort((a, b) => {
@@ -65,12 +106,9 @@ function Financas() {
     });
   }, [sessions, range, q, paymentFilter, sortDir]);
 
-  const total = filtered.reduce((a, s) => a + (s.payment_status === "isento" ? 0 : s.value), 0);
-  const paid = filtered.filter((s) => s.payment_status === "paid").reduce((a, s) => a + s.value, 0);
-  const pending = filtered.filter((s) => s.payment_status === "pending").reduce((a, s) => a + s.value, 0);
-
-  const markPaid = (id: string) =>
-    setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, payment_status: "paid" } : s)));
+  const total = filtered.reduce((a, s) => a + (s.payment_status === "isento" ? 0 : Number(s.value)), 0);
+  const paid = filtered.filter((s) => s.payment_status === "paid").reduce((a, s) => a + Number(s.value), 0);
+  const pending = filtered.filter((s) => s.payment_status === "pending").reduce((a, s) => a + Number(s.value), 0);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -109,7 +147,7 @@ function Financas() {
               className="w-full bg-card border border-border rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as any)}>
+          <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as PaymentStatus | "all")}>
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Status">
                 {paymentFilter === "all" ? "Todos os status" : PAYMENT_META[paymentFilter].label}
@@ -118,12 +156,7 @@ function Financas() {
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
               {(Object.keys(PAYMENT_META) as PaymentStatus[]).map((s) => (
-                <SelectItem
-                  key={s}
-                  value={s}
-                  textValue={PAYMENT_META[s].label}
-                  className="focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-primary/8"
-                >
+                <SelectItem key={s} value={s} textValue={PAYMENT_META[s].label}>
                   <div className="flex flex-col">
                     <span className="text-sm text-foreground">{PAYMENT_META[s].label}</span>
                     <span className="text-xs text-muted-foreground">{PAYMENT_META[s].description}</span>
@@ -184,79 +217,95 @@ function Financas() {
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="text-left p-4 font-medium">Paciente</th>
-                <th className="text-left p-4 font-medium">
-                  <button
-                    onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                    className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
-                  >
-                    Última sessão
-                    {sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                  </button>
-                </th>
-                <th className="text-right p-4 font-medium">Valor</th>
-                <th className="text-left p-4 font-medium">Status</th>
-                <th className="text-right p-4 font-medium">Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((s) => {
-                const p = patients.find((x) => x.id === s.patient_id);
-                const meta = PAYMENT_META[s.payment_status as PaymentStatus];
-                return (
-                  <tr key={s.id} className="border-b border-border last:border-0">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <PatientAvatar name={p?.name ?? "?"} src={p?.avatar} size={36} />
-                        <div className="min-w-0">
-                          <p className="font-medium truncate">{p?.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{p?.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-muted-foreground">
-                      {new Date(s.date_time).toLocaleDateString("pt-BR")}
-                    </td>
-                    <td className="p-4 text-right tabular-nums">R$ {s.value}</td>
-                    <td className="p-4">
-                      <span className={`text-xs px-2 py-1 rounded-full ${meta.className}`}>
-                        {meta.label}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      {s.payment_status === "pending" && (
-                        <button onClick={() => markPaid(s.id)} className="text-xs bg-primary text-primary-foreground rounded-full px-3 py-1.5 hover:bg-primary/90">
-                          Marcar como pago
-                        </button>
-                      )}
-                    </td>
+          {isLoading ? (
+            <div className="p-12 text-center text-muted-foreground text-sm">Carregando...</div>
+          ) : sessions.length === 0 ? (
+            <EmptyState
+              icon={Wallet}
+              title="Nenhuma sessão registrada ainda"
+              description="Quando você criar sessões na agenda, elas aparecerão aqui com seus respectivos valores e status de pagamento."
+            />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="Nada por aqui"
+              description="Nenhuma sessão encontrada com os filtros aplicados. Tente ajustar o período ou a busca."
+            />
+          ) : (
+            <>
+              <table className="w-full">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                    <th className="text-left p-4 font-medium">Paciente</th>
+                    <th className="text-left p-4 font-medium">
+                      <button
+                        onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
+                      >
+                        Data
+                        {sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                      </button>
+                    </th>
+                    <th className="text-right p-4 font-medium">Valor</th>
+                    <th className="text-left p-4 font-medium">Status</th>
+                    <th className="text-right p-4 font-medium">Ação</th>
                   </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={5} className="p-12 text-center text-muted-foreground">Nenhuma sessão neste período.</td></tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {paginated.map((s) => {
+                    const meta = PAYMENT_META[s.payment_status];
+                    return (
+                      <tr key={s.id} className="border-b border-border last:border-0">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <PatientAvatar name={s.patients?.name ?? "?"} src={s.patients?.avatar_url ?? undefined} size={36} />
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{s.patients?.name ?? "—"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{s.patients?.email ?? ""}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm text-muted-foreground">
+                          {new Date(s.date_time).toLocaleDateString("pt-BR")}
+                        </td>
+                        <td className="p-4 text-right tabular-nums">R$ {Number(s.value).toLocaleString("pt-BR")}</td>
+                        <td className="p-4">
+                          <span className={`text-xs px-2 py-1 rounded-full ${meta.className}`}>
+                            {meta.label}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          {s.payment_status === "pending" && (
+                            <button
+                              onClick={() => markPaidMutation.mutate(s.id)}
+                              disabled={markPaidMutation.isPending}
+                              className="text-xs bg-primary text-primary-foreground rounded-full px-3 py-1.5 hover:bg-primary/90 disabled:opacity-50"
+                            >
+                              Marcar como pago
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
 
-          {filtered.length > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm text-muted-foreground">
-              <span>
-                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span>Página {currentPage} de {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm text-muted-foreground">
+                <span>
+                  {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span>Página {currentPage} de {totalPages}</span>
+                  <Button variant="outline" size="sm" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
