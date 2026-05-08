@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/cadastro")({
   component: Cadastro,
@@ -8,7 +10,9 @@ export const Route = createFileRoute("/cadastro")({
 
 function Cadastro() {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     email: "",
     password: "",
