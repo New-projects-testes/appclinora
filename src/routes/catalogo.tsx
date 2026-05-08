@@ -17,12 +17,7 @@ export const Route = createFileRoute("/catalogo")({
   component: Catalogo,
 });
 
-// Deterministic price per professional (mock)
-const priceFor = (id: string) => {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return 150 + (h % 9) * 25; // 150..350
-};
+
 
 function Catalogo() {
   const [q, setQ] = useState("");
