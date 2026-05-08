@@ -69,7 +69,7 @@ function Login() {
             <div>
               <div className="flex justify-between">
                 <label className="text-sm font-medium">Senha</label>
-                <a href="#" className="text-xs text-primary hover:underline">Esqueci minha senha</a>
+                <Link to="/esqueci-senha" className="text-xs text-primary hover:underline">Esqueci minha senha</Link>
               </div>
               <input
                 type="password"
