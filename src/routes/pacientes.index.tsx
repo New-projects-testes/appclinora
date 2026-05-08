@@ -1,10 +1,16 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
-import { patients as initialPatients } from "@/lib/mock-data";
-import type { Patient, PatientStatus } from "@/lib/types";
+import { EmptyState } from "@/components/EmptyState";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Database } from "@/integrations/supabase/types";
 import React, { useMemo, useState } from "react";
-import { Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus, Search, ArrowUpDown, ArrowUp, ArrowDown,
+  ChevronLeft, ChevronRight, Users,
+} from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -19,6 +25,9 @@ import {
 import { PatientAvatar } from "@/components/PatientAvatar";
 import { toast } from "sonner";
 
+type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
+type PatientStatus = Database["public"]["Enums"]["patient_status"];
+
 export const Route = createFileRoute("/pacientes/")({
   component: Pacientes,
 });
@@ -31,13 +40,36 @@ const STATUS_META: Record<PatientStatus, { label: string; description: string; c
 };
 
 const PAGE_SIZE = 10;
-
 type SortKey = "name" | "lastSession";
 type SortDir = "asc" | "desc";
 
 function Pacientes() {
   const navigate = useNavigate();
-  const [list, setList] = useState<Patient[]>(initialPatients);
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const { data: list = [], isLoading } = useQuery({
+    queryKey: ["patients", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data as PatientRow[];
+    },
+  });
+
+  const updateStatusMut = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: PatientStatus }) => {
+      const { error } = await supabase.from("patients").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["patients"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<PatientStatus | "all">("all");
   const [lastSessionFilter, setLastSessionFilter] = useState<"all" | "7" | "30" | "90" | "older">("all");
@@ -53,8 +85,8 @@ function Pacientes() {
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (q && !p.name.toLowerCase().includes(q.toLowerCase())) return false;
       if (lastSessionFilter !== "all") {
-        if (!p.lastSession) return lastSessionFilter === "older";
-        const diff = now - new Date(p.lastSession).getTime();
+        if (!p.last_session) return lastSessionFilter === "older";
+        const diff = now - new Date(p.last_session).getTime();
         if (lastSessionFilter === "7" && diff > days(7)) return false;
         if (lastSessionFilter === "30" && diff > days(30)) return false;
         if (lastSessionFilter === "90" && diff > days(90)) return false;
@@ -70,8 +102,8 @@ function Pacientes() {
       let cmp = 0;
       if (sortKey === "name") cmp = a.name.localeCompare(b.name, "pt-BR");
       else {
-        const av = a.lastSession ? new Date(a.lastSession).getTime() : 0;
-        const bv = b.lastSession ? new Date(b.lastSession).getTime() : 0;
+        const av = a.last_session ? new Date(a.last_session).getTime() : 0;
+        const bv = b.last_session ? new Date(b.last_session).getTime() : 0;
         cmp = av - bv;
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -93,9 +125,7 @@ function Pacientes() {
     return sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
   };
 
-  const updateStatus = (id: string, status: PatientStatus) => {
-    setList((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
-  };
+  const hasFilters = q !== "" || statusFilter !== "all" || lastSessionFilter !== "all";
 
   return (
     <AppShell>
@@ -120,7 +150,7 @@ function Pacientes() {
               className="w-full bg-card border border-border rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as any); setPage(1); }}>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as PatientStatus | "all"); setPage(1); }}>
             <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
@@ -129,7 +159,7 @@ function Pacientes() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={lastSessionFilter} onValueChange={(v) => { setLastSessionFilter(v as any); setPage(1); }}>
+          <Select value={lastSessionFilter} onValueChange={(v) => { setLastSessionFilter(v as typeof lastSessionFilter); setPage(1); }}>
             <SelectTrigger className="w-full md:w-[200px]"><SelectValue placeholder="Última sessão" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Qualquer data</SelectItem>
@@ -142,103 +172,119 @@ function Pacientes() {
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="text-left p-4 font-medium">
-                  <button onClick={() => toggleSort("name")} className="inline-flex items-center gap-1.5 hover:text-foreground">
-                    Paciente <SortIcon k="name" />
-                  </button>
-                </th>
-                <th className="text-left p-4 font-medium">WhatsApp</th>
-                <th className="text-left p-4 font-medium">Status</th>
-                <th className="text-left p-4 font-medium">
-                  <button onClick={() => toggleSort("lastSession")} className="inline-flex items-center gap-1.5 hover:text-foreground">
-                    Última sessão <SortIcon k="lastSession" />
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0">
-                  <td
-                    className="p-0 cursor-pointer group"
-                    onClick={() => navigate({ to: "/pacientes/$id", params: { id: p.id } })}
-                  >
-                    <div className="flex items-center gap-3 p-4 transition-colors group-hover:bg-primary/5">
-                      <PatientAvatar name={p.name} src={p.avatar} size={36} />
-                      <div className="min-w-0">
-                        <p className="font-medium group-hover:text-primary transition-colors truncate">{p.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{p.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-sm text-muted-foreground">{p.phone}</td>
-                  <td className="p-4">
-                    <Select value={p.status} onValueChange={(v) => updateStatus(p.id, v as PatientStatus)}>
-                      <SelectTrigger className={`h-8 w-[140px] border-0 text-xs font-medium ${STATUS_META[p.status].className}`}>
-                        <span>{STATUS_META[p.status].label}</span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
-                          <SelectItem
-                            key={s}
-                            value={s}
-                            textValue={STATUS_META[s].label}
-                            className="focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-primary/8"
-                          >
-                            <div className="flex flex-col">
-                              <span className="text-sm text-foreground">{STATUS_META[s].label}</span>
-                              <span className="text-xs text-muted-foreground">{STATUS_META[s].description}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="p-4 text-sm text-muted-foreground">
-                    {p.lastSession ? new Date(p.lastSession).toLocaleDateString("pt-BR") : "—"}
-                  </td>
-                </tr>
-              ))}
-              {paginated.length === 0 && (
-                <tr><td colSpan={4} className="p-12 text-center text-muted-foreground">Nenhum paciente encontrado.</td></tr>
-              )}
-            </tbody>
-          </table>
+          {isLoading ? (
+            <div className="p-12 text-center text-sm text-muted-foreground">Carregando...</div>
+          ) : list.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="Nenhum paciente ainda"
+              description="Cadastre seu primeiro paciente para começar a registrar atendimentos, anotações e finanças."
+              action={
+                <Button onClick={() => setOpenNew(true)} className="rounded-lg">
+                  <Plus className="h-4 w-4" /> Cadastrar paciente
+                </Button>
+              }
+            />
+          ) : sorted.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="Nenhum resultado"
+              description={hasFilters ? "Tente ajustar os filtros para encontrar o paciente." : "Sem registros para exibir."}
+            />
+          ) : (
+            <>
+              <table className="w-full">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                    <th className="text-left p-4 font-medium">
+                      <button onClick={() => toggleSort("name")} className="inline-flex items-center gap-1.5 hover:text-foreground">
+                        Paciente <SortIcon k="name" />
+                      </button>
+                    </th>
+                    <th className="text-left p-4 font-medium">WhatsApp</th>
+                    <th className="text-left p-4 font-medium">Status</th>
+                    <th className="text-left p-4 font-medium">
+                      <button onClick={() => toggleSort("lastSession")} className="inline-flex items-center gap-1.5 hover:text-foreground">
+                        Última sessão <SortIcon k="lastSession" />
+                      </button>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginated.map((p) => (
+                    <tr key={p.id} className="border-b border-border last:border-0">
+                      <td
+                        className="p-0 cursor-pointer group"
+                        onClick={() => navigate({ to: "/pacientes/$id", params: { id: p.id } })}
+                      >
+                        <div className="flex items-center gap-3 p-4 transition-colors group-hover:bg-primary/5">
+                          <PatientAvatar name={p.name} src={p.avatar_url ?? undefined} size={36} />
+                          <div className="min-w-0">
+                            <p className="font-medium group-hover:text-primary transition-colors truncate">{p.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{p.email ?? ""}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">{p.phone ?? "—"}</td>
+                      <td className="p-4">
+                        <Select value={p.status} onValueChange={(v) => updateStatusMut.mutate({ id: p.id, status: v as PatientStatus })}>
+                          <SelectTrigger className={`h-8 w-[140px] border-0 text-xs font-medium ${STATUS_META[p.status].className}`}>
+                            <span>{STATUS_META[p.status].label}</span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(Object.keys(STATUS_META) as PatientStatus[]).map((s) => (
+                              <SelectItem
+                                key={s}
+                                value={s}
+                                textValue={STATUS_META[s].label}
+                                className="focus:bg-muted/60 focus:text-foreground data-[state=checked]:bg-primary/8"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-foreground">{STATUS_META[s].label}</span>
+                                  <span className="text-xs text-muted-foreground">{STATUS_META[s].description}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {p.last_session ? new Date(p.last_session).toLocaleDateString("pt-BR") : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-          {sorted.length > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm text-muted-foreground">
-              <span>
-                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sorted.length)} de {sorted.length}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span>Página {currentPage} de {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm text-muted-foreground">
+                <span>
+                  {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sorted.length)} de {sorted.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span>Página {currentPage} de {totalPages}</span>
+                  <Button variant="outline" size="sm" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
 
-      <NewPatientDialog
-        open={openNew}
-        onOpenChange={setOpenNew}
-        onCreate={(p) => { setList([p, ...list]); setPage(1); toast.success("Paciente criado com sucesso"); }}
-      />
+      <NewPatientDialog open={openNew} onOpenChange={setOpenNew} />
     </AppShell>
   );
 }
 
 function NewPatientDialog({
-  open, onOpenChange, onCreate,
-}: { open: boolean; onOpenChange: (v: boolean) => void; onCreate: (p: Patient) => void }) {
+  open, onOpenChange,
+}: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -265,35 +311,42 @@ function NewPatientDialog({
     setIsMinor(false); setGName(""); setGEmail(""); setGPhone(""); setPhoto(undefined);
   };
 
+  const createMut = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Sem sessão");
+      const { error } = await supabase.from("patients").insert({
+        owner_id: user.id,
+        name: name.trim(),
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        birth_date: birthDate || null,
+        gender: gender || null,
+        notes: notes.trim() || null,
+        is_minor: isMinor,
+        guardian_name: isMinor ? gName.trim() : null,
+        guardian_email: isMinor ? gEmail.trim() : null,
+        guardian_phone: isMinor ? gPhone.trim() : null,
+        avatar_url: photo ?? null,
+        status: "ativo",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success("Paciente criado com sucesso");
+      reset();
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !phone.trim()) {
-      toast.error("Preencha os campos obrigatórios");
-      return;
-    }
+    if (!name.trim()) return toast.error("Informe o nome");
     if (isMinor && (!gName.trim() || !gEmail.trim() || !gPhone.trim())) {
-      toast.error("Preencha os dados do responsável");
-      return;
+      return toast.error("Preencha os dados do responsável");
     }
-    const p: Patient = {
-      id: `p${Date.now()}`,
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      birthDate: birthDate || undefined,
-      gender: gender || undefined,
-      notes: notes.trim() || undefined,
-      isMinor,
-      guardianName: isMinor ? gName.trim() : undefined,
-      guardianEmail: isMinor ? gEmail.trim() : undefined,
-      guardianPhone: isMinor ? gPhone.trim() : undefined,
-      status: "ativo",
-      tags: [],
-      avatar: photo,
-    };
-    onCreate(p);
-    reset();
-    onOpenChange(false);
+    createMut.mutate();
   };
 
   return (
@@ -325,11 +378,11 @@ function NewPatientDialog({
             <Field label="Nome completo" required>
               <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
             </Field>
-            <Field label="E-mail" required>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} required />
+            <Field label="E-mail">
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} />
             </Field>
-            <Field label="WhatsApp" required>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" maxLength={20} required />
+            <Field label="WhatsApp">
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" maxLength={20} />
             </Field>
             <Field label="Data de nascimento">
               <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
@@ -379,8 +432,10 @@ function NewPatientDialog({
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit">Criar paciente</Button>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit" disabled={createMut.isPending} className="rounded-lg">
+              {createMut.isPending ? "Criando..." : "Criar paciente"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -391,7 +446,7 @@ function NewPatientDialog({
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm">{label}{required && <span className="text-destructive ml-0.5">*</span>}</Label>
+      <Label>{label}{required && <span className="text-destructive ml-0.5">*</span>}</Label>
       {children}
     </div>
   );
