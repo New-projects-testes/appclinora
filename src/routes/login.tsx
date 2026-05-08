@@ -77,9 +77,10 @@ function Login() {
 
           <button
             type="submit"
-            className="w-full bg-primary text-primary-foreground font-medium rounded-full py-3 hover:bg-primary/90 transition"
+            disabled={loading}
+            className="w-full bg-primary text-primary-foreground font-medium rounded-lg py-3 hover:bg-primary/90 transition disabled:opacity-60"
           >
-            Entrar
+            {loading ? "Entrando…" : "Entrar"}
           </button>
 
           <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
