@@ -22,7 +22,7 @@ function Login() {
           <p className="font-display leading-tight italic text-5xl">
             {"\n"}
           </p>
-          <p className="mt-4 opacity-80 text-4xl font-sans text-white">Mais tempo para escutar.{"\n"}Menos tempo na planilha.</p>
+          <p className="mt-4 opacity-80 font-sans text-white text-5xl">Mais tempo para escutar.&nbsp;{"\n"}Menos tempo na planilha.</p>
         </div>
         <p className="text-xs opacity-70">© 2026 Clinora</p>
       </div>
