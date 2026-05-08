@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/cadastro")({
   component: Cadastro,
@@ -8,7 +10,9 @@ export const Route = createFileRoute("/cadastro")({
 
 function Cadastro() {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -55,10 +59,31 @@ function Cadastro() {
           </div>
 
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (step === 1) setStep(2);
-              else navigate({ to: "/dashboard" });
+              if (step === 1) {
+                setStep(2);
+                return;
+              }
+              setLoading(true);
+              const [city, state] = form.location.split(",").map((s) => s.trim());
+              const { error } = await signUp(form.email, form.password, {
+                name: form.name,
+                specialty: form.specialty,
+                city: city || form.location,
+                state: state || "",
+                registration_type: form.regType,
+                registration_number: form.regNumber,
+                accepts_online: form.online,
+                accepts_presential: form.presential,
+              });
+              setLoading(false);
+              if (error) {
+                toast.error(error.message);
+                return;
+              }
+              toast.success("Conta criada! Bem-vindo(a) à Clinora.");
+              navigate({ to: "/dashboard" });
             }}
             className="space-y-5"
           >
@@ -124,8 +149,8 @@ function Cadastro() {
                   <ArrowLeft className="h-4 w-4" /> Voltar
                 </button>
               )}
-              <button type="submit" className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-medium rounded-full py-3 hover:bg-primary/90 transition">
-                {step === 1 ? "Continuar" : "Começar agora"} <ArrowRight className="h-4 w-4" />
+              <button type="submit" disabled={loading} className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-medium rounded-lg py-3 hover:bg-primary/90 transition disabled:opacity-60">
+                {loading ? "Criando conta…" : step === 1 ? "Continuar" : "Começar agora"} <ArrowRight className="h-4 w-4" />
               </button>
             </div>
 

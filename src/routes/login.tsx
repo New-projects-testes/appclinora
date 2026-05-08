@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -8,8 +10,10 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [loading, setLoading] = useState(false);
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       <div className="hidden md:flex flex-col justify-between bg-primary text-primary-foreground p-10">
@@ -25,8 +29,15 @@ function Login() {
 
       <div className="flex items-center justify-center p-6 md:p-12 bg-background">
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
+            setLoading(true);
+            const { error } = await signIn(email, pw);
+            setLoading(false);
+            if (error) {
+              toast.error(error.message === "Invalid login credentials" ? "E-mail ou senha incorretos" : error.message);
+              return;
+            }
             navigate({ to: "/dashboard" });
           }}
           className="w-full max-w-sm space-y-6"
@@ -66,9 +77,10 @@ function Login() {
 
           <button
             type="submit"
-            className="w-full bg-primary text-primary-foreground font-medium rounded-full py-3 hover:bg-primary/90 transition"
+            disabled={loading}
+            className="w-full bg-primary text-primary-foreground font-medium rounded-lg py-3 hover:bg-primary/90 transition disabled:opacity-60"
           >
-            Entrar
+            {loading ? "Entrando…" : "Entrar"}
           </button>
 
           <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
