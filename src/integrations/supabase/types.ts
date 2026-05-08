@@ -14,7 +14,477 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      annotations: {
+        Row: {
+          content: string
+          created_at: string
+          date: string
+          id: string
+          owner_id: string
+          patient_id: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          date?: string
+          id?: string
+          owner_id: string
+          patient_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          date?: string
+          id?: string
+          owner_id?: string
+          patient_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annotations_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annotations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          date_time: string
+          for_self: boolean
+          id: string
+          is_first_consultation: boolean
+          modality: Database["public"]["Enums"]["modality"]
+          patient_email: string
+          patient_name: string
+          patient_phone: string | null
+          price: number | null
+          professional_id: string
+          status: Database["public"]["Enums"]["booking_status"]
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          date_time: string
+          for_self?: boolean
+          id?: string
+          is_first_consultation?: boolean
+          modality?: Database["public"]["Enums"]["modality"]
+          patient_email: string
+          patient_name: string
+          patient_phone?: string | null
+          price?: number | null
+          professional_id: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          date_time?: string
+          for_self?: boolean
+          id?: string
+          is_first_consultation?: boolean
+          modality?: Database["public"]["Enums"]["modality"]
+          patient_email?: string
+          patient_name?: string
+          patient_phone?: string | null
+          price?: number | null
+          professional_id?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_tag_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          patient_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          patient_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          patient_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_tag_assignments_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_tag_assignments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "patient_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_tags_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          avatar_url: string | null
+          birth_date: string | null
+          created_at: string
+          email: string | null
+          gender: string | null
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          id: string
+          is_minor: boolean
+          last_session: string | null
+          name: string
+          notes: string | null
+          owner_id: string
+          phone: string | null
+          status: Database["public"]["Enums"]["patient_status"]
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          gender?: string | null
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          is_minor?: boolean
+          last_session?: string | null
+          name: string
+          notes?: string | null
+          owner_id: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["patient_status"]
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          gender?: string | null
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          is_minor?: boolean
+          last_session?: string | null
+          name?: string
+          notes?: string | null
+          owner_id?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["patient_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patients_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          accepts_online: boolean
+          accepts_presential: boolean
+          avatar_url: string | null
+          bio: string
+          catalog_visible: boolean
+          city: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          price_online: number | null
+          price_presential: number | null
+          registration_number: string
+          registration_type: string
+          reminder_enabled: boolean
+          reminder_interval_minutes: number
+          specialty: string
+          state: string
+          updated_at: string
+          verification_status: boolean
+        }
+        Insert: {
+          accepts_online?: boolean
+          accepts_presential?: boolean
+          avatar_url?: string | null
+          bio?: string
+          catalog_visible?: boolean
+          city?: string
+          created_at?: string
+          email: string
+          id: string
+          name?: string
+          price_online?: number | null
+          price_presential?: number | null
+          registration_number?: string
+          registration_type?: string
+          reminder_enabled?: boolean
+          reminder_interval_minutes?: number
+          specialty?: string
+          state?: string
+          updated_at?: string
+          verification_status?: boolean
+        }
+        Update: {
+          accepts_online?: boolean
+          accepts_presential?: boolean
+          avatar_url?: string | null
+          bio?: string
+          catalog_visible?: boolean
+          city?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          price_online?: number | null
+          price_presential?: number | null
+          registration_number?: string
+          registration_type?: string
+          reminder_enabled?: boolean
+          reminder_interval_minutes?: number
+          specialty?: string
+          state?: string
+          updated_at?: string
+          verification_status?: boolean
+        }
+        Relationships: []
+      }
+      session_templates: {
+        Row: {
+          approach: string
+          content: string
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          approach?: string
+          content?: string
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          approach?: string
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_templates_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          date_time: string
+          duration_minutes: number
+          id: string
+          modality: Database["public"]["Enums"]["modality"]
+          notes: string | null
+          owner_id: string
+          patient_id: string
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          status: Database["public"]["Enums"]["session_status"]
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          date_time: string
+          duration_minutes?: number
+          id?: string
+          modality?: Database["public"]["Enums"]["modality"]
+          notes?: string | null
+          owner_id: string
+          patient_id: string
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          status?: Database["public"]["Enums"]["session_status"]
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          date_time?: string
+          duration_minutes?: number
+          id?: string
+          modality?: Database["public"]["Enums"]["modality"]
+          notes?: string | null
+          owner_id?: string
+          patient_id?: string
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          status?: Database["public"]["Enums"]["session_status"]
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          owner_id: string
+          patient_id: string | null
+          position: number
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          owner_id: string
+          patient_id?: string | null
+          position?: number
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          owner_id?: string
+          patient_id?: string | null
+          position?: number
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +493,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      booking_status: "pending" | "confirmed" | "cancelled"
+      modality: "online" | "presencial"
+      patient_status: "ativo" | "em_pausa" | "inativo" | "encerrado"
+      payment_status: "pending" | "paid" | "isento"
+      session_status: "scheduled" | "done" | "cancelled"
+      task_status: "a_fazer" | "em_andamento" | "concluido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +625,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      booking_status: ["pending", "confirmed", "cancelled"],
+      modality: ["online", "presencial"],
+      patient_status: ["ativo", "em_pausa", "inativo", "encerrado"],
+      payment_status: ["pending", "paid", "isento"],
+      session_status: ["scheduled", "done", "cancelled"],
+      task_status: ["a_fazer", "em_andamento", "concluido"],
+    },
   },
 } as const
