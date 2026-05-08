@@ -5,10 +5,7 @@ import { useMemo, useState } from "react";
 import { Search, MapPin, Globe2, Building2, X, Mail, Phone, BadgeCheck, ArrowRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-
-const PRICE_MIN = 150;
-const PRICE_MAX = 350;
-const LINKEDIN_BLUE = "#0A66C2";
+import { PRICE_MIN, PRICE_MAX, LINKEDIN_BLUE, priceFor } from "@/lib/catalog-utils";
 
 export const Route = createFileRoute("/catalogo")({
   head: () => ({
@@ -20,12 +17,7 @@ export const Route = createFileRoute("/catalogo")({
   component: Catalogo,
 });
 
-// Deterministic price per professional (mock)
-const priceFor = (id: string) => {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return 150 + (h % 9) * 25; // 150..350
-};
+
 
 function Catalogo() {
   const [q, setQ] = useState("");
@@ -264,9 +256,9 @@ function ProfileModal({ pro, onClose }: { pro: Professional; onClose: () => void
             <button onClick={() => setContact(true)} className="flex-1 bg-primary text-primary-foreground rounded-lg py-3 text-sm font-medium hover:bg-primary/90">
               Entrar em contato
             </button>
-            <a href={`https://clinora.app/agendar/${pro.id}`} target="_blank" rel="noreferrer" className="flex-1 border border-border rounded-lg py-3 text-sm font-medium text-center hover:bg-secondary">
+            <Link to="/catalogo/agendar/$proId" params={{ proId: pro.id }} className="flex-1 border border-border rounded-lg py-3 text-sm font-medium text-center hover:bg-secondary">
               Marcar consulta
-            </a>
+            </Link>
           </div>
         )}
       </div>
