@@ -256,9 +256,9 @@ function ProfileModal({ pro, onClose }: { pro: Professional; onClose: () => void
             <button onClick={() => setContact(true)} className="flex-1 bg-primary text-primary-foreground rounded-lg py-3 text-sm font-medium hover:bg-primary/90">
               Entrar em contato
             </button>
-            <a href={`https://clinora.app/agendar/${pro.id}`} target="_blank" rel="noreferrer" className="flex-1 border border-border rounded-lg py-3 text-sm font-medium text-center hover:bg-secondary">
+            <Link to="/catalogo/agendar/$proId" params={{ proId: pro.id }} className="flex-1 border border-border rounded-lg py-3 text-sm font-medium text-center hover:bg-secondary">
               Marcar consulta
-            </a>
+            </Link>
           </div>
         )}
       </div>
